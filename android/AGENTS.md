@@ -27,7 +27,8 @@
 - Lyrics Mode UI composable in `com.mediacontrol.app.ui.LyricsScreen` — same signature as PlayerScreen, shows compressed player with lyrics panel
 - Mode toggle state (`showLyrics`) managed via `remember { mutableStateOf(false) }` in `MediaControlApp` composable in `MainActivity.kt`
 - Time formatting utility in `com.mediacontrol.app.ui.FormatUtils` — `internal fun formatTime(ms: Long): String` shared between PlayerScreen and LyricsScreen
-- `parseLyricsLines(lyrics: String?)` in LyricsScreen strips LRC timestamps (`[mm:ss.xx]`) for clean text display
+- `parseLyricsLines(lyrics: String?)` in LyricsScreen parses LRC timestamps into `List<LyricsLine>(timeMs, text)` — regex `\[(\d{2}):(\d{2})\.?(\d*)\]` extracts mm, ss, fractional seconds; centiseconds (2-digit) *10 or milliseconds (3-digit) as-is
+- Karaoke-style lyrics highlighting: `findCurrentLineIndex()` finds the last timed line where `timeMs <= progressMs`; `currentLineIndex` drives auto-scroll via `LazyListState.animateScrollToItem()` and conditional styling (white+bold+headlineSmall for current, dimmed+normal+bodyLarge for others)
 - Media control icons require `material-icons-extended` dependency (PlayArrow, Pause, SkipNext, SkipPrevious)
 - Seekable progress bar pattern: use local `isDragging` state to decouple Slider value from live progress during drag; on `onValueChangeFinished`, send `"seek"` command with seconds value
 - LyricsScreen uses 35/65 split: compressed left panel (album art, title+artist, slider, controls) and expanded right panel (scrollable lyrics in LazyColumn)

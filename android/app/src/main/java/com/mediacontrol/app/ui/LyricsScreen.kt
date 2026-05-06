@@ -12,7 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -26,6 +27,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +42,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.mediacontrol.app.model.UiState
+
+private data class LyricsLine(val timeMs: Long, val text: String)
 
 @Composable
 fun LyricsScreen(
@@ -64,6 +68,18 @@ fun LyricsScreen(
 
     val lyricsLines = remember(playbackState.lyrics) {
         parseLyricsLines(playbackState.lyrics)
+    }
+
+    val currentLineIndex = remember(playbackState.progressMs, lyricsLines) {
+        findCurrentLineIndex(lyricsLines, playbackState.progressMs)
+    }
+
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(currentLineIndex) {
+        if (lyricsLines.isNotEmpty()) {
+            listState.animateScrollToItem(currentLineIndex)
+        }
     }
 
     Row(
@@ -215,15 +231,18 @@ fun LyricsScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(lyricsLines) { line ->
+                    itemsIndexed(lyricsLines) { index, line ->
+                        val isCurrent = index == currentLineIndex
                         Text(
-                            text = line,
-                            color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            text = line.text,
+                            color = if (isCurrent) Color.White else Color.White.copy(alpha = 0.5f),
+                            style = if (isCurrent) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }
@@ -232,12 +251,37 @@ fun LyricsScreen(
     }
 }
 
-private fun parseLyricsLines(lyrics: String?): List<String> {
+private fun parseLyricsLines(lyrics: String?): List<LyricsLine> {
     if (lyrics.isNullOrBlank()) return emptyList()
 
-    val lines = lyrics.lines().map { line ->
-        line.replace(Regex("\\[\\d{2}:\\d{2}\\.?\\d*\\]"), "").trim()
+    val pattern = Regex("""\[(\d{2}):(\d{2})\.?(\d*)\]""")
+    return lyrics.lines().mapNotNull { line ->
+        val match = pattern.find(line)
+        if (match != null) {
+            val minutes = match.groupValues[1].toInt()
+            val seconds = match.groupValues[2].toInt()
+            val fractional = match.groupValues[3]
+            val millis = when (fractional.length) {
+                2 -> fractional.toInt() * 10
+                3 -> fractional.toInt()
+                else -> 0
+            }
+            val timeMs = (minutes * 60L + seconds) * 1000L + millis
+            val text = line.replace(pattern, "").trim()
+            if (text.isNotBlank()) LyricsLine(timeMs, text) else null
+        } else {
+            val trimmed = line.trim()
+            if (trimmed.isNotBlank()) LyricsLine(0, trimmed) else null
+        }
     }
+}
 
-    return lines.filter { it.isNotBlank() }
+private fun findCurrentLineIndex(lines: List<LyricsLine>, progressMs: Long): Int {
+    var lastIndex = 0
+    for (i in lines.indices) {
+        if (lines[i].timeMs > 0 && lines[i].timeMs <= progressMs) {
+            lastIndex = i
+        }
+    }
+    return lastIndex
 }

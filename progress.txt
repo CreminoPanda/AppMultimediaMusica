@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- LRC lyrics parsing: use `LyricsLine(timeMs, text)` data class; regex `\[(\d{2}):(\d{2})\.?(\d*)\]` with `fractional.length` switch for 2-digit (cents *10) or 3-digit (ms) precision
+- Karaoke lyrics highlighting: `findCurrentLineIndex()` finds last timed line with `timeMs <= progressMs`; `LazyListState.animateScrollToItem()` for auto-scroll; conditional styling via `isCurrent` flag
 - Android Gradle wrapper: generate with `gradle wrapper --gradle-version=8.4`; wrapper JAR and scripts not committed (generated locally)
 - Android compilation: requires JDK 17 (not newer versions), use `JAVA_HOME` env var to point to correct JDK
 - Mesh gradient background: use Coil `ImageLoader.execute()` with `BitmapDrawable.cast()` for bitmap extraction, then `Palette.from(bitmap).generate()` for color extraction on `Dispatchers.IO`
@@ -137,3 +139,16 @@
   - Useful context: 35/65 layout split for lyrics mode (compact player on left, scrollable lyrics on right)
 ---
 
+
+## [06/05/2026 23:45] - US-011
+- What was implemented: Karaoke-style synchronized lyrics highlighting — LRC timestamp parsing into timed lines, auto-scroll to current verse, and distinct visual highlighting
+- Files changed: android/app/src/main/java/com/mediacontrol/app/ui/LyricsScreen.kt, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: `LyricsLine` data class carries `timeMs: Long` and `text: String` for timed LRC lines
+  - Patterns discovered: Regex `\[(\d{2}):(\d{2})\.?(\d*)\]` captures minutes, seconds, and fractional seconds; handle 2-digit (centiseconds *10) and 3-digit (milliseconds) precision
+  - Patterns discovered: Karaoke highlighting uses `findCurrentLineIndex()` with `LazyListState.animateScrollToItem()` keyed on `currentLineIndex` for smooth auto-scroll
+  - Gotchas encountered: `animateScrollToItem` called in `LaunchedEffect` — key on `currentLineIndex` so it only fires when the target line changes, not every frame
+  - Gotchas encountered: Lines without timestamps (timeMs=0) are skipped in current line matching to avoid false positives
+  - Useful context: `itemsIndexed` from `androidx.compose.foundation.lazy.itemsIndexed` is needed for indexed rendering in LazyColumn
+  - Useful context: `rememberLazyListState()` provides stable list state for scroll control across recompositions
+---
