@@ -19,5 +19,7 @@
 
 ## Architecture
 - Single Activity (`MainActivity`) using `setContent` for Compose UI
-- State managed via `mutableStateOf` at Activity level (ViewModel comes in US-007)
+- ViewModel (`PlaybackViewModel`) manages state via `StateFlow<UiState>`, injected with `viewModel()` in Compose
 - Composable functions receive state as parameters, not as global state
+- `PlaybackViewModel.connect()` initializes WebSocket and stores token for command authentication
+- Commands sent via `sendCommand(action, value?)` use `kotlinx.serialization.json.buildJsonObject` for proper JSON serialization

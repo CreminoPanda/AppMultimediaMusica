@@ -1,7 +1,6 @@
 package com.mediacontrol.app
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -13,68 +12,43 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.mediacontrol.app.websocket.ConnectionState
-import com.mediacontrol.app.websocket.WebSocketClient
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mediacontrol.app.model.UiState
+import com.mediacontrol.app.viewmodel.PlaybackViewModel
 
 class MainActivity : ComponentActivity() {
-    private lateinit var webSocketClient: WebSocketClient
-    private var connectionState by mutableStateOf<ConnectionState>(ConnectionState.Disconnected)
-    private var lastMessage by mutableStateOf<String?>(null)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setupWebSocket()
+
         setContent {
+            val viewModel = viewModel<PlaybackViewModel>()
+            val uiState by viewModel.uiState.collectAsState()
+
+            LaunchedEffect(Unit) {
+                viewModel.connect(
+                    host = BuildConfig.WS_HOST,
+                    port = BuildConfig.WS_PORT.toString(),
+                    token = BuildConfig.WS_TOKEN
+                )
+            }
+
             MaterialTheme {
-                MediaControlApp(connectionState = connectionState, lastMessage = lastMessage)
+                MediaControlApp(uiState = uiState)
             }
         }
-    }
-
-    private fun setupWebSocket() {
-        val host = BuildConfig.WS_HOST
-        val port = BuildConfig.WS_PORT
-        val token = BuildConfig.WS_TOKEN
-        val serverUrl = "ws://$host:$port"
-
-        webSocketClient = WebSocketClient(
-            serverUrl = serverUrl,
-            token = token,
-            onStateChanged = { state ->
-                connectionState = state
-                Log.i(TAG, "Connection state: $state")
-            },
-            onMessageReceived = { message ->
-                lastMessage = message
-                Log.i(TAG, "Message received: $message")
-            }
-        )
-        webSocketClient.connect()
-    }
-
-    override fun onDestroy() {
-        webSocketClient.disconnect()
-        super.onDestroy()
-    }
-
-    companion object {
-        private const val TAG = "MediaControl"
     }
 }
 
 @Composable
-fun MediaControlApp(
-    connectionState: ConnectionState,
-    lastMessage: String?
-) {
+fun MediaControlApp(uiState: UiState) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -85,8 +59,8 @@ fun MediaControlApp(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(32.dp)
         ) {
-            when (connectionState) {
-                is ConnectionState.Connecting -> {
+            when (uiState) {
+                is UiState.Loading, is UiState.Connecting -> {
                     CircularProgressIndicator(color = Color.White)
                     Text(
                         text = "Connecting...",
@@ -95,32 +69,78 @@ fun MediaControlApp(
                         modifier = Modifier.padding(top = 16.dp)
                     )
                 }
-                is ConnectionState.Connected -> {
+                is UiState.Connected -> {
                     Text(
                         text = "Connected",
                         color = Color.Green,
                         style = MaterialTheme.typography.headlineSmall
                     )
-                    lastMessage?.let { msg ->
+                    uiState.playbackState?.let { state ->
                         Text(
-                            text = msg,
+                            text = "Title: ${state.title}",
                             color = Color.White,
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 16.dp)
                         )
+                        Text(
+                            text = "Artist: ${state.artist}",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
-                is ConnectionState.Disconnected -> {
+                is UiState.Playing -> {
+                    Text(
+                        text = "Playing",
+                        color = Color.Green,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = uiState.playbackState.title,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                    Text(
+                        text = uiState.playbackState.artist,
+                        color = Color.LightGray,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                is UiState.Paused -> {
+                    Text(
+                        text = "Paused",
+                        color = Color.Yellow,
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = uiState.playbackState.title,
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                    Text(
+                        text = uiState.playbackState.artist,
+                        color = Color.LightGray,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                is UiState.Disconnected -> {
                     Text(
                         text = "Disconnected",
                         color = Color.Gray,
                         style = MaterialTheme.typography.headlineSmall
                     )
                 }
-                is ConnectionState.Error -> {
+                is UiState.Error -> {
                     Text(
-                        text = "Error: ${connectionState.message}",
+                        text = "Error: ${uiState.message}",
                         color = Color.Red,
                         style = MaterialTheme.typography.headlineSmall,
                         textAlign = TextAlign.Center

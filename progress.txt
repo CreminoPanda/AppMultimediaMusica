@@ -1,5 +1,13 @@
 ## Codebase Patterns
+- Android Gradle wrapper: generate with `gradle wrapper --gradle-version=8.4`; wrapper JAR and scripts not committed (generated locally)
+- Android compilation: requires JDK 17 (not newer versions), use `JAVA_HOME` env var to point to correct JDK
 - API enrichment modules follow the same pattern: async function returns a dataclass, uses `urllib.request` with `loop.run_in_executor()`, `_parse_*` helper for response processing
+- Android WebSocket client: OkHttp with pingInterval(30s), ConnectionState sealed class, token handshake on open
+- Android buildConfig stored as buildConfigField in app/build.gradle.kts (WS_HOST, WS_PORT, WS_TOKEN)
+- Android landscape mode forced via `android:screenOrientation="landscape"` in manifest
+- LAN cleartext traffic enabled via `android:usesCleartextTraffic="true"` in manifest
+- Android Gradle stack: AGP 8.2.2, Kotlin 1.9.22, Compose BOM 2024.02.00, OkHttp 4.12.0
+- Android project structure: module under `android/` with standard Gradle layout
 - Use `urllib.request` with `loop.run_in_executor()` for async HTTP calls (avoids adding httpx/aiohttp deps)
 - Server entry point: `src/server.py` with `asyncio.run(main())`
 - Authentication: token-based handshake in `src/auth.py`, verified via `verify_token()`
@@ -63,5 +71,30 @@
   - Gotchas encountered: `clients -= disconnected` triggers ruff F823 (local var reference before assignment) — use `clients.difference_update()` and iterate over `list(clients)` snapshot
   - Gotchas encountered: Eagerly created coroutines in command_map produce "never awaited" warnings in tests — acceptable since mocked send_* functions are patched, real code awaits only the selected one
   - Useful context: Playerctl position outputs seconds as float string — multiply by 1000 for ms
-  - Useful context: Album metadata fetched separately via `playerctl metadata --format "{{album}}"` 
+   - Useful context: Album metadata fetched separately via `playerctl metadata --format "{{album}}"` 
+---
+
+## [06/05/2026 20:00] - US-006
+- What was implemented: Android project scaffolding with WebSocket client and connection state management
+- Files changed: .gitignore, prd.json, progress.txt, android/AGENTS.md, android/build.gradle.kts, android/settings.gradle.kts, android/gradle.properties, android/gradle/wrapper/gradle-wrapper.properties, android/app/build.gradle.kts, android/app/src/main/AndroidManifest.xml, android/app/src/main/res/values/strings.xml, android/app/src/main/res/values/themes.xml, android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/app/src/main/java/com/mediacontrol/app/websocket/WebSocketClient.kt
+- **Learnings for future iterations:**
+  - Patterns discovered: Android project uses standard Gradle layout under `android/` with AGP 8.2.2 and Kotlin 1.9.22
+  - Patterns discovered: Server config (host, port, token) accessed via BuildConfig fields defined in `defaultConfig.buildConfigField`
+  - Patterns discovered: Connection states modeled as sealed class for exhaustive `when` matching in Compose
+  - Gotchas encountered: OkHttp WebSocket authentication is implicit — first received message after handshake confirms auth, not an explicit auth response
+  - Gotchas encountered: Android 10 needs `android:usesCleartextTraffic="true"` for LAN ws:// connections
+  - Useful context: OkHttp `pingInterval(30, TimeUnit.SECONDS)` keeps WebSocket alive on Android
+   - Useful context: Gradle wrapper needs to be generated (`gradle wrapper`) before `./gradlew` works — wrapper JAR and scripts not committed (generated locally)
+---
+
+## [06/05/2026 21:00] - US-007
+- What was implemented: Data models (PlaybackState, UiState) and PlaybackViewModel with WebSocket connect/parse/expose StateFlow
+- Files changed: android/app/src/main/java/com/mediacontrol/app/model/PlaybackState.kt, android/app/src/main/java/com/mediacontrol/app/model/UiState.kt, android/app/src/main/java/com/mediacontrol/app/viewmodel/PlaybackViewModel.kt, android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: `kotlinx.serialization.json.buildJsonObject` with `put()` used for building command JSON in ViewModel
+  - Patterns discovered: ViewModel stores `token` as field for command authentication
+  - Gotchas encountered: `sendCommand` must include `token` field in command payload for server validation
+  - Gotchas encountered: `gradle wrapper` requires JDK 17; Java 26 causes "26.0.1" error from Gradle 8.x
+  - Gotchas encountered: AGP 8.2.2 auto-installs missing build-tools (34.0.0) during first build
+  - Useful context: `compileDebugKotlin` passes without emulator — just validates Kotlin compilation
 ---
