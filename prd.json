@@ -92,8 +92,8 @@
         "Typecheck passes (./gradlew compileDebugKotlin)"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Android 10 compatibility ensured via minSdk=29 and usesCleartextTraffic=true for LAN WebSocket."
     },
     {
       "id": "US-007",
