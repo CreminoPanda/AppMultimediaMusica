@@ -6,7 +6,10 @@
 - Mesh gradient background: use Coil `ImageLoader.execute()` with `BitmapDrawable.cast()` for bitmap extraction, then `Palette.from(bitmap).generate()` for color extraction on `Dispatchers.IO`
 - Canvas animation pattern: `rememberInfiniteTransition` with `animateFloat` + `tween` + `RepeatMode.Reverse` for blob motion; `Brush.radialGradient` with alpha-faded colors for bloom effect
 - API enrichment modules follow the same pattern: async function returns a dataclass, uses `urllib.request` with `loop.run_in_executor()`, `_parse_*` helper for response processing
-- Android WebSocket client: OkHttp with pingInterval(30s), ConnectionState sealed class, token handshake on open
+- Android WebSocket client: OkHttp with pingInterval(30s), ConnectionState sealed class, token handshake on open, exponential backoff reconnection (BASE_DELAY_MS=1s, MAX_DELAY_MS=30s), requires CoroutineScope at construction
+- UI mode transitions (Player↔Lyrics): AnimatedContent with slideInHorizontally + fadeIn togetherWith slideOutHorizontally + fadeOut; key on showLyrics boolean
+- Track change animation: AnimatedContent with fadeIn() togetherWith fadeOut() around album art and metadata; key on playbackState.title; wrap AsyncImage in Box for weight compatibility
+- Screen-wake reconnection: DisposableEffect + LocalLifecycleOwner.current observing Lifecycle.Event.ON_START in MainActivity; triggers viewModel.onScreenWake()
 - Android buildConfig stored as buildConfigField in app/build.gradle.kts (WS_HOST, WS_PORT, WS_TOKEN)
 - Android landscape mode forced via `android:screenOrientation="landscape"` in manifest
 - LAN cleartext traffic enabled via `android:usesCleartextTraffic="true"` in manifest
@@ -149,6 +152,20 @@
   - Patterns discovered: Karaoke highlighting uses `findCurrentLineIndex()` with `LazyListState.animateScrollToItem()` keyed on `currentLineIndex` for smooth auto-scroll
   - Gotchas encountered: `animateScrollToItem` called in `LaunchedEffect` — key on `currentLineIndex` so it only fires when the target line changes, not every frame
   - Gotchas encountered: Lines without timestamps (timeMs=0) are skipped in current line matching to avoid false positives
-  - Useful context: `itemsIndexed` from `androidx.compose.foundation.lazy.itemsIndexed` is needed for indexed rendering in LazyColumn
-  - Useful context: `rememberLazyListState()` provides stable list state for scroll control across recompositions
+   - Useful context: `itemsIndexed` from `androidx.compose.foundation.lazy.itemsIndexed` is needed for indexed rendering in LazyColumn
+   - Useful context: `rememberLazyListState()` provides stable list state for scroll control across recompositions
+---
+
+## [06/05/2026 23:59] - US-012
+- What was implemented: Mode transitions with animated crossfade/slide, animated entry for album art and text on track change, WebSocket reconnection with exponential backoff, and screen-wake reconnection via lifecycle observer
+- Files changed: android/app/build.gradle.kts, android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/app/src/main/java/com/mediacontrol/app/websocket/WebSocketClient.kt, android/app/src/main/java/com/mediacontrol/app/viewmodel/PlaybackViewModel.kt, android/app/src/main/java/com/mediacontrol/app/ui/PlayerScreen.kt, android/app/src/main/java/com/mediacontrol/app/ui/LyricsScreen.kt, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Use `AnimatedContent` with `slideInHorizontally` + `fadeIn` togetherWith `slideOutHorizontally` + `fadeOut` for mode transitions in `MediaControlApp`
+  - Patterns discovered: Use `AnimatedContent` with `fadeIn() togetherWith fadeOut()` for track change animations on album art and metadata; wrap `AsyncImage` in a `Box` to hold `weight` modifier outside `AnimatedContent`
+  - Patterns discovered: WebSocket auto-reconnection implemented directly in `WebSocketClient` with exponential backoff (1s base, 30s cap, shift up to 5); use `CoroutineScope` for scheduling retries
+  - Patterns discovered: Screen-wake reconnection via `DisposableEffect` + `LocalLifecycleOwner.current` in `MainActivity`, observing `Lifecycle.Event.ON_START`
+  - Gotchas encountered: `viewModelScope` from `lifecycle-viewmodel-ktx:2.7.0` was not resolving despite adding the dependency — used a custom `CoroutineScope(SupervisorJob() + Dispatchers.Main)` instead
+  - Gotchas encountered: `AnimatedContent` wraps content in a `Box` internally, so `weight` modifiers don't work inside it — wrap the `AnimatedContent` in a parent `Box` with the weight modifier
+  - Useful context: `onScreenWake()` in ViewModel checks if state is `Disconnected` or `Error` before reconnecting to avoid duplicate connections
+  - Useful context: `DisposableEffect` properly cleans up the lifecycle observer via `onDispose` to prevent leaks
 ---

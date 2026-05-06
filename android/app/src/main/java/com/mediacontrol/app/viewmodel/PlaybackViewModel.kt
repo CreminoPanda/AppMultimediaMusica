@@ -6,6 +6,10 @@ import com.mediacontrol.app.model.PlaybackState
 import com.mediacontrol.app.model.UiState
 import com.mediacontrol.app.websocket.ConnectionState
 import com.mediacontrol.app.websocket.WebSocketClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,17 +22,24 @@ class PlaybackViewModel : ViewModel() {
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     private var webSocketClient: WebSocketClient? = null
+    private var host: String = ""
+    private var port: String = ""
     private var token: String = ""
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val json = Json { ignoreUnknownKeys = true }
 
     fun connect(host: String, port: String, token: String) {
+        this.host = host
+        this.port = port
         this.token = token
         val serverUrl = "ws://$host:$port"
 
         webSocketClient = WebSocketClient(
             serverUrl = serverUrl,
             token = token,
+            coroutineScope = scope,
             onStateChanged = { connectionState ->
                 handleConnectionState(connectionState)
             },
@@ -89,12 +100,17 @@ class PlaybackViewModel : ViewModel() {
         }
     }
 
-    fun reconnect() {
-        webSocketClient?.disconnect()
+    fun onScreenWake() {
+        val current = _uiState.value
+        if (current is UiState.Disconnected || current is UiState.Error) {
+            webSocketClient?.disconnect()
+            connect(host, port, token)
+        }
     }
 
     override fun onCleared() {
         webSocketClient?.disconnect()
+        scope.cancel()
         super.onCleared()
     }
 

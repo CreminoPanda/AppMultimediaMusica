@@ -1,6 +1,11 @@
 package com.mediacontrol.app.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -72,48 +77,64 @@ fun PlayerScreen(
                 .fillMaxHeight()
                 .padding(end = 8.dp)
         ) {
-            AsyncImage(
-                model = playbackState.artUrl.ifEmpty { null },
-                contentDescription = "Album art",
-                contentScale = ContentScale.Fit,
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .weight(1f)
-                    .padding(8.dp)
-            )
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = playbackState.title,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "album_art"
+                ) {
+                    AsyncImage(
+                        model = playbackState.artUrl.ifEmpty { null },
+                        contentDescription = "Album art",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = playbackState.title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-
-            Text(
-                text = playbackState.album,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.LightGray,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-
-            Text(
-                text = playbackState.artist,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color.LightGray,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
+            AnimatedContent(
+                targetState = playbackState.title,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "track_meta"
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = playbackState.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = playbackState.album,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.LightGray,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = playbackState.artist,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.LightGray,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
 
         Column(

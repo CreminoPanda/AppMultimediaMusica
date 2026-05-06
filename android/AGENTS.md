@@ -39,3 +39,11 @@
 - Composable functions receive state as parameters, not as global state
 - `PlaybackViewModel.connect()` initializes WebSocket and stores token for command authentication
 - Commands sent via `sendCommand(action, value?)` use `kotlinx.serialization.json.buildJsonObject` for proper JSON serialization
+- WebSocket reconnection with exponential backoff built into `WebSocketClient` (BASE_DELAY_MS=1s, shr shl retryCount capped at 5, MAX_DELAY_MS=30s); uses `CoroutineScope` passed at construction
+- ViewModel uses custom `CoroutineScope(SupervisorJob() + Dispatchers.Main)` instead of `viewModelScope` to avoid dependency issues — cancelled in `onCleared()`
+- Screen-wake reconnection via `DisposableEffect` + `LocalLifecycleOwner.current` observing `Lifecycle.Event.ON_START` in `MainActivity`; triggers `viewModel.onScreenWake()`
+
+## UI Animations
+- Mode transitions (Player ↔ Lyrics): use `AnimatedContent` with `slideInHorizontally` + `fadeIn` togetherWith `slideOutHorizontally` + `fadeOut` in `MediaControlApp`
+- Track change animation: use `AnimatedContent` with `fadeIn() togetherWith fadeOut()` wrapped around album art (in a `Box` with `weight`) and metadata text sections separately; key on `playbackState.title`
+- Album art `AsyncImage` inside `AnimatedContent` should use `Modifier.fillMaxSize()` and be wrapped in a parent `Box` with the `weight` modifier to avoid layout issues
