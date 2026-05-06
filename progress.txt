@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- Use `urllib.request` with `loop.run_in_executor()` for async HTTP calls (avoids adding httpx/aiohttp deps)
 - Server entry point: `src/server.py` with `asyncio.run(main())`
 - Authentication: token-based handshake in `src/auth.py`, verified via `verify_token()`
 - Config from environment variables in `src/config.py`
@@ -26,4 +27,16 @@
   - Gotchas encountered: Pytest needs PYTHONPATH or `pip install -e .` to import from `src` package
   - Useful context: playerctl follow outputs lines in `<instance>: <status/metadata>` format
   - Useful context: `playerctl metadata --format "{{title}} — {{artist}}"` outputs formatted metadata
+---
+
+## [06/05/2026 18:30] - US-003
+- What was implemented: iTunes Search API enrichment module for HD album artwork and track duration
+- Files changed: src/itunes.py, src/playerctl.py, tests/test_itunes.py, requirements.txt, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Use `urllib.request` with `loop.run_in_executor()` for async HTTP calls (avoids httpx/aiohttp deps)
+  - Gotchas encountered: Tests need `PYTHONPATH=.` or editable install to import from `src` package
+  - Gotchas encountered: mypy strict mode catches `Returning Any` - explicitly type intermediate vars to fix
+  - Gotchas encountered: `pytest-asyncio` must be installed for `@pytest.mark.asyncio` tests to work
+  - Useful context: iTunes Search API returns `artworkUrl100` - replace `100x100` with `600x600` for HD
+  - Useful context: iTunes Search API field `trackTimeMillis` provides accurate track duration
 ---

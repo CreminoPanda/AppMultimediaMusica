@@ -5,6 +5,8 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
 
+from src.itunes import search_track
+
 logger = logging.getLogger(__name__)
 
 _DASH_RE = re.compile(r"\s*[—–-]\s+")
@@ -20,6 +22,8 @@ class PlaybackStatus(Enum):
 class TrackInfo:
     title: str = ""
     artist: str = ""
+    art_url: str = ""
+    duration_ms: int = 0
 
 
 @dataclass
@@ -58,7 +62,12 @@ async def get_player_metadata(instance: str) -> TrackInfo:
         stderr=asyncio.subprocess.PIPE,
     )
     stdout, _ = await proc.communicate()
-    return parse_metadata(stdout.decode().strip())
+    track = parse_metadata(stdout.decode().strip())
+    if track.title:
+        enriched = await search_track(track.title, track.artist)
+        track.art_url = enriched.art_url
+        track.duration_ms = enriched.duration_ms
+    return track
 
 
 async def get_player_status(instance: str) -> PlaybackStatus:
