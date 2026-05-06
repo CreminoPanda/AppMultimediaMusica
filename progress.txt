@@ -110,6 +110,17 @@
   - Gotchas encountered: `ANDROID_HOME` must be set (system default was `/opt/android-sdk` but actual SDK at `/home/marcelo/android-sdk`)
   - Useful context: Palette API provides `darkVibrantSwatch`, `vibrantSwatch`, `lightVibrantSwatch`, `darkMutedSwatch`, `mutedSwatch` for color extraction
   - Useful context: Use `Color(it.rgb)` to convert palette swatch int to Compose Color
-  - Useful context: Blob positions animated as relative offsets (0 to 1), scaled by canvas size at draw time
+   - Useful context: Blob positions animated as relative offsets (0 to 1), scaled by canvas size at draw time
+---
+
+## [06/05/2026 23:00] - US-009
+- What was implemented: Player Mode UI — 50/50 landscape layout with album art, metadata, progress bar, and playback controls
+- Files changed: android/app/src/main/java/com/mediacontrol/app/ui/PlayerScreen.kt (new), android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/app/build.gradle.kts, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: PlayerScreen composable receives UiState + onCommand callback + onToggleLyrics callback
+  - Patterns discovered: Slider with local `isDragging` state for seekable progress — decouple from live progress during drag
+  - Gotchas encountered: `material-icons-extended` must be added to dependencies for PlayArrow/Pause/SkipNext/SkipPrevious icons
+  - Gotchas encountered: `when(uiState)` branches must be exhaustive; `is UiState.Playing, is UiState.Paused` can share the same PlayerScreen
+  - Useful context: Landscape 50/50 layout uses `Row` with `Modifier.weight(1f)` on each side; left panel uses Column with AsyncImage + Text, right panel uses Column with Slider + IconButtons
 ---
 

@@ -140,7 +140,7 @@
         "Verify on Android emulator"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

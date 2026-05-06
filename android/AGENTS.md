@@ -23,6 +23,9 @@
 - Coil + Palette API for extracting vibrant/dark/muted colors from album art; DEFAULT_COLORS used when no art is available
 - Canvas-based animation with `rememberInfiniteTransition` + `animateFloat` + `tween` for blob movement; radial gradients for bloom effect
 - Color extraction runs on `Dispatchers.IO`; bitmap requires explicit `BitmapDrawable.cast()` from Coil `DrawableResult`
+- Player UI composable in `com.mediacontrol.app.ui.PlayerScreen` — takes `(UiState, onCommand, onToggleLyrics)` as parameters
+- Media control icons require `material-icons-extended` dependency (PlayArrow, Pause, SkipNext, SkipPrevious)
+- Seekable progress bar pattern: use local `isDragging` state to decouple Slider value from live progress during drag; on `onValueChangeFinished`, send `"seek"` command with seconds value
 
 ## Architecture
 - Single Activity (`MainActivity`) using `setContent` for Compose UI

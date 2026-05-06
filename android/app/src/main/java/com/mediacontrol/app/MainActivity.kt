@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mediacontrol.app.model.UiState
 import com.mediacontrol.app.ui.MeshGradientBackground
+import com.mediacontrol.app.ui.PlayerScreen
 import com.mediacontrol.app.viewmodel.PlaybackViewModel
 
 class MainActivity : ComponentActivity() {
@@ -42,14 +43,20 @@ class MainActivity : ComponentActivity() {
             }
 
             MaterialTheme {
-                MediaControlApp(uiState = uiState)
+                MediaControlApp(
+                    uiState = uiState,
+                    onCommand = viewModel::sendCommand
+                )
             }
         }
     }
 }
 
 @Composable
-fun MediaControlApp(uiState: UiState) {
+fun MediaControlApp(
+    uiState: UiState,
+    onCommand: (String, Number?) -> Unit = { _, _ -> }
+) {
     val artUrl = when (uiState) {
         is UiState.Playing -> uiState.playbackState.artUrl
         is UiState.Paused -> uiState.playbackState.artUrl
@@ -63,15 +70,15 @@ fun MediaControlApp(uiState: UiState) {
             modifier = Modifier.fillMaxSize()
         )
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp)
-        ) {
-            when (uiState) {
-                is UiState.Loading, is UiState.Connecting -> {
+        when (uiState) {
+            is UiState.Loading, is UiState.Connecting -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp)
+                ) {
                     CircularProgressIndicator(color = Color.White)
                     Text(
                         text = "Connecting...",
@@ -80,7 +87,15 @@ fun MediaControlApp(uiState: UiState) {
                         modifier = Modifier.padding(top = 16.dp)
                     )
                 }
-                is UiState.Connected -> {
+            }
+            is UiState.Connected -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp)
+                ) {
                     Text(
                         text = "Connected",
                         color = Color.Green,
@@ -102,54 +117,37 @@ fun MediaControlApp(uiState: UiState) {
                         )
                     }
                 }
-                is UiState.Playing -> {
-                    Text(
-                        text = "Playing",
-                        color = Color.Green,
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Text(
-                        text = uiState.playbackState.title,
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
-                    Text(
-                        text = uiState.playbackState.artist,
-                        color = Color.LightGray,
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center
-                    )
-                }
-                is UiState.Paused -> {
-                    Text(
-                        text = "Paused",
-                        color = Color.Yellow,
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Text(
-                        text = uiState.playbackState.title,
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
-                    Text(
-                        text = uiState.playbackState.artist,
-                        color = Color.LightGray,
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center
-                    )
-                }
-                is UiState.Disconnected -> {
+            }
+            is UiState.Playing, is UiState.Paused -> {
+                PlayerScreen(
+                    uiState = uiState,
+                    onCommand = onCommand,
+                    onToggleLyrics = { }
+                )
+            }
+            is UiState.Disconnected -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp)
+                ) {
                     Text(
                         text = "Disconnected",
                         color = Color.Gray,
                         style = MaterialTheme.typography.headlineSmall
                     )
                 }
-                is UiState.Error -> {
+            }
+            is UiState.Error -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp)
+                ) {
                     Text(
                         text = "Error: ${uiState.message}",
                         color = Color.Red,
