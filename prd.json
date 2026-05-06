@@ -156,7 +156,7 @@
         "Verify on Android emulator"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

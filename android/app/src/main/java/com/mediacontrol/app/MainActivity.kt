@@ -19,10 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mediacontrol.app.model.UiState
 import com.mediacontrol.app.ui.MeshGradientBackground
+import com.mediacontrol.app.ui.LyricsScreen
 import com.mediacontrol.app.ui.PlayerScreen
 import com.mediacontrol.app.viewmodel.PlaybackViewModel
 
@@ -57,6 +61,7 @@ fun MediaControlApp(
     uiState: UiState,
     onCommand: (String, Number?) -> Unit = { _, _ -> }
 ) {
+    var showLyrics by remember { mutableStateOf(false) }
     val artUrl = when (uiState) {
         is UiState.Playing -> uiState.playbackState.artUrl
         is UiState.Paused -> uiState.playbackState.artUrl
@@ -119,11 +124,20 @@ fun MediaControlApp(
                 }
             }
             is UiState.Playing, is UiState.Paused -> {
-                PlayerScreen(
-                    uiState = uiState,
-                    onCommand = onCommand,
-                    onToggleLyrics = { }
-                )
+                val toggleLyrics = { showLyrics = !showLyrics }
+                if (showLyrics) {
+                    LyricsScreen(
+                        uiState = uiState,
+                        onCommand = onCommand,
+                        onToggleLyrics = toggleLyrics
+                    )
+                } else {
+                    PlayerScreen(
+                        uiState = uiState,
+                        onCommand = onCommand,
+                        onToggleLyrics = toggleLyrics
+                    )
+                }
             }
             is UiState.Disconnected -> {
                 Column(

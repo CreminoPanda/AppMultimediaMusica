@@ -24,8 +24,13 @@
 - Canvas-based animation with `rememberInfiniteTransition` + `animateFloat` + `tween` for blob movement; radial gradients for bloom effect
 - Color extraction runs on `Dispatchers.IO`; bitmap requires explicit `BitmapDrawable.cast()` from Coil `DrawableResult`
 - Player UI composable in `com.mediacontrol.app.ui.PlayerScreen` — takes `(UiState, onCommand, onToggleLyrics)` as parameters
+- Lyrics Mode UI composable in `com.mediacontrol.app.ui.LyricsScreen` — same signature as PlayerScreen, shows compressed player with lyrics panel
+- Mode toggle state (`showLyrics`) managed via `remember { mutableStateOf(false) }` in `MediaControlApp` composable in `MainActivity.kt`
+- Time formatting utility in `com.mediacontrol.app.ui.FormatUtils` — `internal fun formatTime(ms: Long): String` shared between PlayerScreen and LyricsScreen
+- `parseLyricsLines(lyrics: String?)` in LyricsScreen strips LRC timestamps (`[mm:ss.xx]`) for clean text display
 - Media control icons require `material-icons-extended` dependency (PlayArrow, Pause, SkipNext, SkipPrevious)
 - Seekable progress bar pattern: use local `isDragging` state to decouple Slider value from live progress during drag; on `onValueChangeFinished`, send `"seek"` command with seconds value
+- LyricsScreen uses 35/65 split: compressed left panel (album art, title+artist, slider, controls) and expanded right panel (scrollable lyrics in LazyColumn)
 
 ## Architecture
 - Single Activity (`MainActivity`) using `setContent` for Compose UI

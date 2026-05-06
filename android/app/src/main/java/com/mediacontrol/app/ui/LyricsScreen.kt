@@ -1,6 +1,7 @@
 package com.mediacontrol.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -39,7 +42,7 @@ import coil.compose.AsyncImage
 import com.mediacontrol.app.model.UiState
 
 @Composable
-fun PlayerScreen(
+fun LyricsScreen(
     uiState: UiState,
     onCommand: (String, Number?) -> Unit,
     onToggleLyrics: () -> Unit,
@@ -59,6 +62,10 @@ fun PlayerScreen(
         playbackState.progressMs.toFloat() / playbackState.durationMs.toFloat()
     else 0f
 
+    val lyricsLines = remember(playbackState.lyrics) {
+        parseLyricsLines(playbackState.lyrics)
+    }
+
     Row(
         modifier = modifier
             .fillMaxSize()
@@ -68,7 +75,7 @@ fun PlayerScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
             modifier = Modifier
-                .weight(1f)
+                .weight(0.35f)
                 .fillMaxHeight()
                 .padding(end = 8.dp)
         ) {
@@ -78,15 +85,15 @@ fun PlayerScreen(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .weight(0.5f)
                     .padding(8.dp)
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = playbackState.title,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
@@ -96,40 +103,21 @@ fun PlayerScreen(
             )
 
             Text(
-                text = playbackState.album,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.LightGray,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-
-            Text(
                 text = playbackState.artist,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodySmall,
                 color = Color.LightGray,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
-        }
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .padding(start = 8.dp)
-        ) {
-            Spacer(modifier = Modifier.weight(0.3f))
+            Spacer(modifier = Modifier.weight(0.1f))
 
             Text(
                 text = "${formatTime(playbackState.progressMs)} / ${formatTime(playbackState.durationMs)}",
                 color = Color.White,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodySmall
             )
 
             Slider(
@@ -155,8 +143,6 @@ fun PlayerScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
-
             Row(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
@@ -164,13 +150,13 @@ fun PlayerScreen(
             ) {
                 IconButton(
                     onClick = { onCommand("previous", null) },
-                    modifier = Modifier.size(64.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.SkipPrevious,
                         contentDescription = "Previous",
                         tint = Color.White,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 }
 
@@ -178,40 +164,80 @@ fun PlayerScreen(
                     onClick = {
                         onCommand(if (isPlaying) "pause" else "play", null)
                     },
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.size(64.dp)
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
                         tint = Color.White,
-                        modifier = Modifier.size(64.dp)
+                        modifier = Modifier.size(48.dp)
                     )
                 }
 
                 IconButton(
                     onClick = { onCommand("next", null) },
-                    modifier = Modifier.size(64.dp)
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.SkipNext,
                         contentDescription = "Next",
                         tint = Color.White,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
             TextButton(onClick = onToggleLyrics) {
                 Text(
-                    text = "Lyrics",
+                    text = "Player",
                     color = Color.White,
                     style = MaterialTheme.typography.titleMedium
                 )
             }
+        }
 
-            Spacer(modifier = Modifier.weight(0.3f))
+        Column(
+            modifier = Modifier
+                .weight(0.65f)
+                .fillMaxHeight()
+                .padding(start = 8.dp)
+        ) {
+            if (lyricsLines.isEmpty()) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = "No lyrics available",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(lyricsLines) { line ->
+                        Text(
+                            text = line,
+                            color = Color.White.copy(alpha = 0.7f),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+private fun parseLyricsLines(lyrics: String?): List<String> {
+    if (lyrics.isNullOrBlank()) return emptyList()
+
+    val lines = lyrics.lines().map { line ->
+        line.replace(Regex("\\[\\d{2}:\\d{2}\\.?\\d*\\]"), "").trim()
+    }
+
+    return lines.filter { it.isNotBlank() }
 }
