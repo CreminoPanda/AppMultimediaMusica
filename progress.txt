@@ -1,0 +1,15 @@
+## Codebase Patterns
+- Server entry point: `src/server.py` with `asyncio.run(main())`
+- Authentication: token-based handshake in `src/auth.py`, verified via `verify_token()`
+- Config from environment variables in `src/config.py`
+- Use `asyncio.wait_for()` with TimeoutError for handshake timeout
+- Quality checks: `ruff check src/` and `mypy src/`
+
+## [06/05/2026 17:30] - US-001
+- What was implemented: Backend scaffolding with WebSocket server and token-based authentication
+- Files changed: src/__init__.py, src/server.py, src/auth.py, src/config.py, requirements.txt, pyproject.toml, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: project uses `src/` package structure with config from env vars
+  - Gotchas encountered: `asyncio.TimeoutError` should use builtin `TimeoutError` to pass ruff lint (UP041)
+  - Useful context: `websockets` v16 library used with `websockets.serve()` pattern
+---
