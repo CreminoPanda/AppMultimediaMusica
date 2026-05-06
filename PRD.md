@@ -1,12 +1,3 @@
-Aquí tienes mi PRD. Voy a programar esto usando un script automatizado estilo ralph script que requiere tareas pequeñas e iterativas y un comando de terminal estricto para probar cada una.
-
-Tu trabajo es actuar como Arquitecto de Software. Lee el PRD y divídelo en 5 a 7 'Mini-Tareas' estrictamente secuenciales. Para cada mini-tarea, debes entregarme:
-
-Las instrucciones exactas para el programador.
-
-El comando exacto de Bash/Linux que usaré para probar si la tarea fue exitosa (ej: python3 -c "import backend", o curl, o grep).
-
-
 # Product Requirements Document (PRD) v2.5
 ## Proyecto: Monitor y Control Multimedia (Arch Linux ↔ Android)
 **Foco:** Integración con Apple Music (PWA) e Interfaz Premium Landscape

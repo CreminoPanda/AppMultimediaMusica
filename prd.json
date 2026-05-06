@@ -1,0 +1,195 @@
+{
+  "project": "MediaControl",
+  "branchName": "ralph/monitor-control-multimedia",
+  "description": "Monitor y Control Multimedia (Arch Linux ↔ Android) — Dashboard multimedia landscape con control remoto para Apple Music PWA en Brave, letras sincronizadas estilo karaoke, y fondo dinámico con mesh gradient extraído de la portada.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Backend scaffolding with WebSocket server and auth",
+      "description": "As a developer, I need a Python backend with a WebSocket server and SECRET_TOKEN authentication so the Android app can establish a trusted connection.",
+      "acceptanceCriteria": [
+        "Set up Python venv with requirements.txt (websockets, mypy, ruff)",
+        "Create pyproject.toml with mypy and ruff config",
+        "Project structure: src/server.py as entry point",
+        "WebSocket server listens on localhost, accessible over LAN",
+        "SECRET_TOKEN handshake: client must send correct token or connection is rejected",
+        "Typecheck passes (mypy)"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "playerctl integration — monitor Brave PWA playback",
+      "description": "As a developer, I need to monitor Apple Music PWA playback via playerctl so the backend knows the current track in real time.",
+      "acceptanceCriteria": [
+        "Identify the Brave PWA instance (brave.instanceXXXX) via playerctl",
+        "Set up playerctl follow/monitor mode for the correct instance",
+        "Parse raw metadata with regex: extract title and artist (split 'Song — Artist')",
+        "Emit playback events (Playing, Paused, Stopped) with parsed metadata",
+        "Typecheck passes (mypy)"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "iTunes Search API enrichment",
+      "description": "As a user, I want HD album artwork and accurate track duration, so the UI shows rich metadata beyond what MPRIS provides.",
+      "acceptanceCriteria": [
+        "Query iTunes Search API by track title and artist",
+        "Extract art_url (600x600 HD) and duration_ms from API response",
+        "Handle API errors gracefully (timeout, no results)",
+        "Merge enriched fields into the playback data model",
+        "Typecheck passes (mypy)"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "LRCLIB API enrichment — synchronized lyrics",
+      "description": "As a user, I want synchronized lyrics (karaoke-style) fetched via LRCLIB so the app can display timed lyrics.",
+      "acceptanceCriteria": [
+        "Query LRCLIB API by track title and artist",
+        "Parse LRC format response (timestamps + lyric lines)",
+        "Store both raw LRC string and parsed line array in data model",
+        "Handle API errors gracefully (timeout, no lyrics found)",
+        "Typecheck passes (mypy)"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Unified JSON broadcast and command handling",
+      "description": "As a developer, I need the backend to broadcast a unified JSON payload over WebSocket and execute commands received from Android.",
+      "acceptanceCriteria": [
+        "Build unified JSON matching PRD spec: status, title, artist, album, duration_ms, progress_ms, art_url, lyrics",
+        "Broadcast updated JSON via WebSocket on every playback change",
+        "Receive command JSON from Android: { token, action, value }",
+        "Execute actions via playerctl: play, pause, next, previous, seek",
+        "Validate token on every command message",
+        "Typecheck passes (mypy)"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Android project scaffolding with WebSocket client",
+      "description": "As a developer, I need a Kotlin/Jetpack Compose Android project with WebSocket connectivity and landscape lock so the app can connect to the backend.",
+      "acceptanceCriteria": [
+        "Gradle project with Jetpack Compose, kotlinx.serialization, OkHttp dependencies",
+        "Landscape orientation forced in AndroidManifest.xml",
+        "WebSocket client with SECRET_TOKEN handshake on connect",
+        "Handle connection states: Connecting, Connected, Disconnected, Error",
+        "Typecheck passes (./gradlew compileDebugKotlin)"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Data models and ViewModel state management",
+      "description": "As a developer, I need typed data models and a ViewModel to manage playback state so the UI can observe and react to backend data.",
+      "acceptanceCriteria": [
+        "Kotlin data class matching backend JSON schema (PlaybackState with all fields)",
+        "Sealed class for UI state: Loading, Connected, Playing, Paused, Disconnected, Error",
+        "ViewModel connects to WebSocket, parses JSON, exposes StateFlow<UiState>",
+        "Typecheck passes (./gradlew compileDebugKotlin)"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Dynamic mesh gradient background via Palette API",
+      "description": "As a user, I want a dynamic animated background that extracts colors from the album art, creating an immersive visual experience.",
+      "acceptanceCriteria": [
+        "Load album art image from art_url using Coil",
+        "Extract dominant/vibrant colors via Android Palette API",
+        "Draw animated mesh gradient on Canvas with blurred moving spheres/ellipses",
+        "Animation runs continuously and smoothly (Apple Music-style background)",
+        "Typecheck passes (./gradlew compileDebugKotlin)",
+        "Verify on Android emulator"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Player Mode UI — 50/50 layout with controls",
+      "description": "As a user, I want the default Player Mode with album art, metadata, progress bar, and playback controls in a split-screen layout.",
+      "acceptanceCriteria": [
+        "50/50 horizontal split: left panel (album art + metadata), right panel (progress + controls)",
+        "Left panel: album art displayed large, title (bold), album name, artist name centered below",
+        "Right panel: functional SeekBar/progress bar showing progress_ms / duration_ms",
+        "Right panel controls: Previous, Play/Pause toggle, Next — large touch-friendly buttons",
+        "Lyrics toggle button to switch to Lyrics Mode",
+        "UI updates reactively from ViewModel StateFlow",
+        "Typecheck passes (./gradlew compileDebugKotlin)",
+        "Verify on Android emulator"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Lyrics Mode UI — expanded lyrics display",
+      "description": "As a user, I want to switch to Lyrics Mode where the lyrics take over most of the screen and the player controls are minimized.",
+      "acceptanceCriteria": [
+        "Compressed left panel: smaller album art, only title + artist (no album), controls and progress bar below",
+        "Expanded right panel: full-width scrollable lyrics area",
+        "Toggle button switches between Player Mode and Lyrics Mode",
+        "Layout adapts based on lyrics availability (show placeholder if no lyrics)",
+        "Typecheck passes (./gradlew compileDebugKotlin)",
+        "Verify on Android emulator"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Karaoke-style synchronized lyrics highlighting",
+      "description": "As a user, I want lyrics to auto-scroll and highlight the current verse as the song plays, creating a karaoke experience.",
+      "acceptanceCriteria": [
+        "Parse LRC timestamps from the lyrics field into a list of (time_ms, text) pairs",
+        "Auto-scroll the lyrics list as progress_ms advances",
+        "Highlight the current verse with a distinct style (brighter color, larger font)",
+        "Smooth scrolling animation between verses",
+        "Typecheck passes (./gradlew compileDebugKotlin)",
+        "Verify on Android emulator"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Mode transitions, animations, and reconnection handling",
+      "description": "As a user, I want smooth animated transitions between modes and reliable reconnection when the device wakes from sleep.",
+      "acceptanceCriteria": [
+        "Animated crossfade/slide transition between Player Mode and Lyrics Mode",
+        "Animated entry for album art and text (fade-in on track change)",
+        "WebSocket reconnection on screen wake (detect via BroadcastReceiver or lifecycle)",
+        "Retry handshake with exponential backoff on disconnect",
+        "Typecheck passes (./gradlew compileDebugKotlin)",
+        "Verify on Android emulator"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
