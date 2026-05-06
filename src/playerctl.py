@@ -22,6 +22,7 @@ class PlaybackStatus(Enum):
 class TrackInfo:
     title: str = ""
     artist: str = ""
+    album: str = ""
     art_url: str = ""
     duration_ms: int = 0
 
@@ -63,6 +64,15 @@ async def get_player_metadata(instance: str) -> TrackInfo:
     )
     stdout, _ = await proc.communicate()
     track = parse_metadata(stdout.decode().strip())
+
+    proc_album = await asyncio.create_subprocess_exec(
+        "playerctl", "--player", instance, "metadata", "--format", "{{album}}",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout_album, _ = await proc_album.communicate()
+    track.album = stdout_album.decode().strip()
+
     if track.title:
         enriched = await search_track(track.title, track.artist)
         track.art_url = enriched.art_url
@@ -118,3 +128,49 @@ async def monitor_player(instance: str) -> AsyncIterator[PlaybackEvent]:
             yield PlaybackEvent(status=status, track=track)
 
     await proc.wait()
+
+
+async def get_position(instance: str) -> int:
+    proc = await asyncio.create_subprocess_exec(
+        "playerctl", "--player", instance, "position",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, _ = await proc.communicate()
+    raw = stdout.decode().strip()
+    try:
+        return int(float(raw) * 1000)
+    except (ValueError, TypeError):
+        return 0
+
+
+async def send_command(instance: str, *args: str) -> None:
+    await asyncio.create_subprocess_exec(
+        "playerctl", "--player", instance, *args,
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+
+
+async def send_play(instance: str) -> None:
+    await send_command(instance, "play")
+
+
+async def send_pause(instance: str) -> None:
+    await send_command(instance, "pause")
+
+
+async def send_play_pause(instance: str) -> None:
+    await send_command(instance, "play-pause")
+
+
+async def send_next(instance: str) -> None:
+    await send_command(instance, "next")
+
+
+async def send_previous(instance: str) -> None:
+    await send_command(instance, "previous")
+
+
+async def send_seek(instance: str, position_sec: float) -> None:
+    await send_command(instance, "position", str(position_sec))

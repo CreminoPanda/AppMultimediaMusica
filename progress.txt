@@ -7,8 +7,10 @@
 - Use `asyncio.wait_for()` with TimeoutError for handshake timeout
 - Quality checks: `ruff check src/ tests/ && mypy src/ tests/ && pytest tests/ -v`
 - CLI tool wrappers use `asyncio.create_subprocess_exec()` in `src/playerctl.py`
-- Import from `collections.abc` instead of `typing` for generic types (AsyncIterator, etc.)
+- Import from `collections.abc` instead of `typing` for generic types (AsyncIterator, Awaitable, etc.)
 - Tests import from `src` package — run with `PYTHONPATH=.` or `pip install -e .`
+- Server broadcast pattern: manage client set with `difference_update()` to avoid ruff F823 (local var reference before assignment) – iterate over `list(clients)` snapshot when removing during iteration
+- Command dispatch: use `dict[str, Awaitable[None]]` mapping with eagerly created coroutines, accessed via `.get()` to avoid IndexError
 
 ## [06/05/2026 17:30] - US-001
 - What was implemented: Backend scaffolding with WebSocket server and token-based authentication
@@ -49,5 +51,17 @@
   - Patterns discovered: Follow the same module pattern as itunes.py for API enrichment (async function returning dataclass)
   - Gotchas encountered: LRCLIB API returns `syncedLyrics` and `plainLyrics` as separate fields — use `syncedLyrics` if available, fall back to `plainLyrics`
   - Gotchas encountered: LRCLIB API requires a User-Agent header or it returns 403
-  - Useful context: LRC timestamp format `[mm:ss.xx]` parsed with regex; millisecond precision varies (1-3 digits)
+   - Useful context: LRC timestamp format `[mm:ss.xx]` parsed with regex; millisecond precision varies (1-3 digits)
+---
+
+## [06/05/2026 19:30] - US-005
+- What was implemented: Unified JSON broadcast and command handling
+- Files changed: src/playerctl.py, src/server.py, tests/test_server.py, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Server uses `asyncio.create_task()` for background monitor loop; module-level sets for client tracking
+  - Patterns discovered: Import `Awaitable` from `collections.abc` for typing command dispatch dicts
+  - Gotchas encountered: `clients -= disconnected` triggers ruff F823 (local var reference before assignment) — use `clients.difference_update()` and iterate over `list(clients)` snapshot
+  - Gotchas encountered: Eagerly created coroutines in command_map produce "never awaited" warnings in tests — acceptable since mocked send_* functions are patched, real code awaits only the selected one
+  - Useful context: Playerctl position outputs seconds as float string — multiply by 1000 for ms
+  - Useful context: Album metadata fetched separately via `playerctl metadata --format "{{album}}"` 
 ---
