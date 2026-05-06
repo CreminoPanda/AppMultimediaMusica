@@ -3,7 +3,10 @@
 - Authentication: token-based handshake in `src/auth.py`, verified via `verify_token()`
 - Config from environment variables in `src/config.py`
 - Use `asyncio.wait_for()` with TimeoutError for handshake timeout
-- Quality checks: `ruff check src/` and `mypy src/`
+- Quality checks: `ruff check src/ tests/ && mypy src/ tests/ && pytest tests/ -v`
+- CLI tool wrappers use `asyncio.create_subprocess_exec()` in `src/playerctl.py`
+- Import from `collections.abc` instead of `typing` for generic types (AsyncIterator, etc.)
+- Tests import from `src` package — run with `PYTHONPATH=.` or `pip install -e .`
 
 ## [06/05/2026 17:30] - US-001
 - What was implemented: Backend scaffolding with WebSocket server and token-based authentication
@@ -12,4 +15,15 @@
   - Patterns discovered: project uses `src/` package structure with config from env vars
   - Gotchas encountered: `asyncio.TimeoutError` should use builtin `TimeoutError` to pass ruff lint (UP041)
   - Useful context: `websockets` v16 library used with `websockets.serve()` pattern
+---
+
+## [06/05/2026 18:00] - US-002
+- What was implemented: playerctl integration module for monitoring Brave PWA playback
+- Files changed: src/playerctl.py, tests/test_playerctl.py, requirements.txt, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Use `asyncio.create_subprocess_exec()` for CLI tool wrappers (playerctl)
+  - Patterns discovered: Use `collections.abc.AsyncIterator` instead of `typing.AsyncIterator` (ruff UP035)
+  - Gotchas encountered: Pytest needs PYTHONPATH or `pip install -e .` to import from `src` package
+  - Useful context: playerctl follow outputs lines in `<instance>: <status/metadata>` format
+  - Useful context: `playerctl metadata --format "{{title}} — {{artist}}"` outputs formatted metadata
 ---
