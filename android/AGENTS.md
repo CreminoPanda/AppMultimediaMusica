@@ -17,6 +17,13 @@
 - Token handshake is sent immediately on `onOpen`; first received message confirms authentication
 - Use `pingInterval(30, TimeUnit.SECONDS)` to keep connection alive
 
+## UI Components
+- Mesh gradient background in `com.mediacontrol.app.ui.MeshGradientBackground` — use as full-screen Box background via `Modifier.fillMaxSize()`
+- Extract `artUrl` from `UiState.Playing.playbackState.artUrl` or `UiState.Paused.playbackState.artUrl`; pass empty string for fallback colors
+- Coil + Palette API for extracting vibrant/dark/muted colors from album art; DEFAULT_COLORS used when no art is available
+- Canvas-based animation with `rememberInfiniteTransition` + `animateFloat` + `tween` for blob movement; radial gradients for bloom effect
+- Color extraction runs on `Dispatchers.IO`; bitmap requires explicit `BitmapDrawable.cast()` from Coil `DrawableResult`
+
 ## Architecture
 - Single Activity (`MainActivity`) using `setContent` for Compose UI
 - ViewModel (`PlaybackViewModel`) manages state via `StateFlow<UiState>`, injected with `viewModel()` in Compose

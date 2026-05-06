@@ -1,6 +1,8 @@
 ## Codebase Patterns
 - Android Gradle wrapper: generate with `gradle wrapper --gradle-version=8.4`; wrapper JAR and scripts not committed (generated locally)
 - Android compilation: requires JDK 17 (not newer versions), use `JAVA_HOME` env var to point to correct JDK
+- Mesh gradient background: use Coil `ImageLoader.execute()` with `BitmapDrawable.cast()` for bitmap extraction, then `Palette.from(bitmap).generate()` for color extraction on `Dispatchers.IO`
+- Canvas animation pattern: `rememberInfiniteTransition` with `animateFloat` + `tween` + `RepeatMode.Reverse` for blob motion; `Brush.radialGradient` with alpha-faded colors for bloom effect
 - API enrichment modules follow the same pattern: async function returns a dataclass, uses `urllib.request` with `loop.run_in_executor()`, `_parse_*` helper for response processing
 - Android WebSocket client: OkHttp with pingInterval(30s), ConnectionState sealed class, token handshake on open
 - Android buildConfig stored as buildConfigField in app/build.gradle.kts (WS_HOST, WS_PORT, WS_TOKEN)
@@ -96,5 +98,18 @@
   - Gotchas encountered: `sendCommand` must include `token` field in command payload for server validation
   - Gotchas encountered: `gradle wrapper` requires JDK 17; Java 26 causes "26.0.1" error from Gradle 8.x
   - Gotchas encountered: AGP 8.2.2 auto-installs missing build-tools (34.0.0) during first build
-  - Useful context: `compileDebugKotlin` passes without emulator — just validates Kotlin compilation
+   - Useful context: `compileDebugKotlin` passes without emulator — just validates Kotlin compilation
 ---
+
+## [06/05/2026 22:00] - US-008
+- What was implemented: Dynamic mesh gradient background using Coil + Palette API for album art color extraction and animated Canvas blobs
+- Files changed: android/app/src/main/java/com/mediacontrol/app/ui/MeshGradientBackground.kt, android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Canvas-based animated background uses `rememberInfiniteTransition` with tween animation spec and `RepeatMode.Reverse` for smooth blob oscillation
+  - Patterns discovered: Coil `ImageLoader.execute(request).drawable` returns `Drawable`, not Bitmap — must cast via `BitmapDrawable.cast()` to get Bitmap for Palette API
+  - Gotchas encountered: `ANDROID_HOME` must be set (system default was `/opt/android-sdk` but actual SDK at `/home/marcelo/android-sdk`)
+  - Useful context: Palette API provides `darkVibrantSwatch`, `vibrantSwatch`, `lightVibrantSwatch`, `darkMutedSwatch`, `mutedSwatch` for color extraction
+  - Useful context: Use `Color(it.rgb)` to convert palette swatch int to Compose Color
+  - Useful context: Blob positions animated as relative offsets (0 to 1), scaled by canvas size at draw time
+---
+

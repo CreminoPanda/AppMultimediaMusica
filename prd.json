@@ -122,7 +122,7 @@
         "Verify on Android emulator"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

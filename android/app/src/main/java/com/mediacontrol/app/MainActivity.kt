@@ -3,7 +3,7 @@ package com.mediacontrol.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mediacontrol.app.model.UiState
+import com.mediacontrol.app.ui.MeshGradientBackground
 import com.mediacontrol.app.viewmodel.PlaybackViewModel
 
 class MainActivity : ComponentActivity() {
@@ -49,15 +50,25 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MediaControlApp(uiState: UiState) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF1A1A2E)),
-        contentAlignment = Alignment.Center
-    ) {
+    val artUrl = when (uiState) {
+        is UiState.Playing -> uiState.playbackState.artUrl
+        is UiState.Paused -> uiState.playbackState.artUrl
+        is UiState.Connected -> uiState.playbackState?.artUrl ?: ""
+        else -> ""
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        MeshGradientBackground(
+            artUrl = artUrl,
+            modifier = Modifier.fillMaxSize()
+        )
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp)
         ) {
             when (uiState) {
                 is UiState.Loading, is UiState.Connecting -> {
