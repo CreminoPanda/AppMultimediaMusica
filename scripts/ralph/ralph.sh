@@ -4,6 +4,9 @@
 
 set -e
 
+export ANDROID_HOME="$HOME/android-sdk"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
+
 MAX_ITERATIONS=${1:-10}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PRD_FILE="$SCRIPT_DIR/prd.json"
@@ -89,7 +92,7 @@ echo "Starting Ralph - Max iterations: $MAX_ITERATIONS"
 
 mkdir -p "$LOG_DIR"
 
-MODEL_FLAGS=(--model=google/antigravity-claude-opus-4-5-thinking --variant=max)
+MODEL_FLAGS=()
 
 TIMEOUT_CMD=()
 TIMEOUT_ENABLED=0

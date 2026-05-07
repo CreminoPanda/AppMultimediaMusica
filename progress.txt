@@ -1,0 +1,171 @@
+## Codebase Patterns
+- LRC lyrics parsing: use `LyricsLine(timeMs, text)` data class; regex `\[(\d{2}):(\d{2})\.?(\d*)\]` with `fractional.length` switch for 2-digit (cents *10) or 3-digit (ms) precision
+- Karaoke lyrics highlighting: `findCurrentLineIndex()` finds last timed line with `timeMs <= progressMs`; `LazyListState.animateScrollToItem()` for auto-scroll; conditional styling via `isCurrent` flag
+- Android Gradle wrapper: generate with `gradle wrapper --gradle-version=8.4`; wrapper JAR and scripts not committed (generated locally)
+- Android compilation: requires JDK 17 (not newer versions), use `JAVA_HOME` env var to point to correct JDK
+- Mesh gradient background: use Coil `ImageLoader.execute()` with `BitmapDrawable.cast()` for bitmap extraction, then `Palette.from(bitmap).generate()` for color extraction on `Dispatchers.IO`
+- Canvas animation pattern: `rememberInfiniteTransition` with `animateFloat` + `tween` + `RepeatMode.Reverse` for blob motion; `Brush.radialGradient` with alpha-faded colors for bloom effect
+- API enrichment modules follow the same pattern: async function returns a dataclass, uses `urllib.request` with `loop.run_in_executor()`, `_parse_*` helper for response processing
+- Android WebSocket client: OkHttp with pingInterval(30s), ConnectionState sealed class, token handshake on open, exponential backoff reconnection (BASE_DELAY_MS=1s, MAX_DELAY_MS=30s), requires CoroutineScope at construction
+- UI mode transitions (Player↔Lyrics): AnimatedContent with slideInHorizontally + fadeIn togetherWith slideOutHorizontally + fadeOut; key on showLyrics boolean
+- Track change animation: AnimatedContent with fadeIn() togetherWith fadeOut() around album art and metadata; key on playbackState.title; wrap AsyncImage in Box for weight compatibility
+- Screen-wake reconnection: DisposableEffect + LocalLifecycleOwner.current observing Lifecycle.Event.ON_START in MainActivity; triggers viewModel.onScreenWake()
+- Android buildConfig stored as buildConfigField in app/build.gradle.kts (WS_HOST, WS_PORT, WS_TOKEN)
+- Android landscape mode forced via `android:screenOrientation="landscape"` in manifest
+- LAN cleartext traffic enabled via `android:usesCleartextTraffic="true"` in manifest
+- Android Gradle stack: AGP 8.2.2, Kotlin 1.9.22, Compose BOM 2024.02.00, OkHttp 4.12.0
+- Android project structure: module under `android/` with standard Gradle layout
+- Use `urllib.request` with `loop.run_in_executor()` for async HTTP calls (avoids adding httpx/aiohttp deps)
+- Server entry point: `src/server.py` with `asyncio.run(main())`
+- Authentication: token-based handshake in `src/auth.py`, verified via `verify_token()`
+- Config from environment variables in `src/config.py`
+- Use `asyncio.wait_for()` with TimeoutError for handshake timeout
+- Quality checks: `ruff check src/ tests/ && mypy src/ tests/ && pytest tests/ -v`
+- CLI tool wrappers use `asyncio.create_subprocess_exec()` in `src/playerctl.py`
+- Import from `collections.abc` instead of `typing` for generic types (AsyncIterator, Awaitable, etc.)
+- Tests import from `src` package — run with `PYTHONPATH=.` or `pip install -e .`
+- Server broadcast pattern: manage client set with `difference_update()` to avoid ruff F823 (local var reference before assignment) – iterate over `list(clients)` snapshot when removing during iteration
+- Command dispatch: use `dict[str, Awaitable[None]]` mapping with eagerly created coroutines, accessed via `.get()` to avoid IndexError
+
+## [06/05/2026 17:30] - US-001
+- What was implemented: Backend scaffolding with WebSocket server and token-based authentication
+- Files changed: src/__init__.py, src/server.py, src/auth.py, src/config.py, requirements.txt, pyproject.toml, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: project uses `src/` package structure with config from env vars
+  - Gotchas encountered: `asyncio.TimeoutError` should use builtin `TimeoutError` to pass ruff lint (UP041)
+  - Useful context: `websockets` v16 library used with `websockets.serve()` pattern
+---
+
+## [06/05/2026 18:00] - US-002
+- What was implemented: playerctl integration module for monitoring Brave PWA playback
+- Files changed: src/playerctl.py, tests/test_playerctl.py, requirements.txt, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Use `asyncio.create_subprocess_exec()` for CLI tool wrappers (playerctl)
+  - Patterns discovered: Use `collections.abc.AsyncIterator` instead of `typing.AsyncIterator` (ruff UP035)
+  - Gotchas encountered: Pytest needs PYTHONPATH or `pip install -e .` to import from `src` package
+  - Useful context: playerctl follow outputs lines in `<instance>: <status/metadata>` format
+  - Useful context: `playerctl metadata --format "{{title}} — {{artist}}"` outputs formatted metadata
+---
+
+## [06/05/2026 18:30] - US-003
+- What was implemented: iTunes Search API enrichment module for HD album artwork and track duration
+- Files changed: src/itunes.py, src/playerctl.py, tests/test_itunes.py, requirements.txt, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Use `urllib.request` with `loop.run_in_executor()` for async HTTP calls (avoids httpx/aiohttp deps)
+  - Gotchas encountered: Tests need `PYTHONPATH=.` or editable install to import from `src` package
+  - Gotchas encountered: mypy strict mode catches `Returning Any` - explicitly type intermediate vars to fix
+  - Gotchas encountered: `pytest-asyncio` must be installed for `@pytest.mark.asyncio` tests to work
+  - Useful context: iTunes Search API returns `artworkUrl100` - replace `100x100` with `600x600` for HD
+   - Useful context: iTunes Search API field `trackTimeMillis` provides accurate track duration
+---
+
+## [06/05/2026 19:00] - US-004
+- What was implemented: LRCLIB API enrichment module for synchronized lyrics
+- Files changed: src/lrclib.py, tests/test_lrclib.py, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Follow the same module pattern as itunes.py for API enrichment (async function returning dataclass)
+  - Gotchas encountered: LRCLIB API returns `syncedLyrics` and `plainLyrics` as separate fields — use `syncedLyrics` if available, fall back to `plainLyrics`
+  - Gotchas encountered: LRCLIB API requires a User-Agent header or it returns 403
+   - Useful context: LRC timestamp format `[mm:ss.xx]` parsed with regex; millisecond precision varies (1-3 digits)
+---
+
+## [06/05/2026 19:30] - US-005
+- What was implemented: Unified JSON broadcast and command handling
+- Files changed: src/playerctl.py, src/server.py, tests/test_server.py, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Server uses `asyncio.create_task()` for background monitor loop; module-level sets for client tracking
+  - Patterns discovered: Import `Awaitable` from `collections.abc` for typing command dispatch dicts
+  - Gotchas encountered: `clients -= disconnected` triggers ruff F823 (local var reference before assignment) — use `clients.difference_update()` and iterate over `list(clients)` snapshot
+  - Gotchas encountered: Eagerly created coroutines in command_map produce "never awaited" warnings in tests — acceptable since mocked send_* functions are patched, real code awaits only the selected one
+  - Useful context: Playerctl position outputs seconds as float string — multiply by 1000 for ms
+   - Useful context: Album metadata fetched separately via `playerctl metadata --format "{{album}}"` 
+---
+
+## [06/05/2026 20:00] - US-006
+- What was implemented: Android project scaffolding with WebSocket client and connection state management
+- Files changed: .gitignore, prd.json, progress.txt, android/AGENTS.md, android/build.gradle.kts, android/settings.gradle.kts, android/gradle.properties, android/gradle/wrapper/gradle-wrapper.properties, android/app/build.gradle.kts, android/app/src/main/AndroidManifest.xml, android/app/src/main/res/values/strings.xml, android/app/src/main/res/values/themes.xml, android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/app/src/main/java/com/mediacontrol/app/websocket/WebSocketClient.kt
+- **Learnings for future iterations:**
+  - Patterns discovered: Android project uses standard Gradle layout under `android/` with AGP 8.2.2 and Kotlin 1.9.22
+  - Patterns discovered: Server config (host, port, token) accessed via BuildConfig fields defined in `defaultConfig.buildConfigField`
+  - Patterns discovered: Connection states modeled as sealed class for exhaustive `when` matching in Compose
+  - Gotchas encountered: OkHttp WebSocket authentication is implicit — first received message after handshake confirms auth, not an explicit auth response
+  - Gotchas encountered: Android 10 needs `android:usesCleartextTraffic="true"` for LAN ws:// connections
+  - Useful context: OkHttp `pingInterval(30, TimeUnit.SECONDS)` keeps WebSocket alive on Android
+   - Useful context: Gradle wrapper needs to be generated (`gradle wrapper`) before `./gradlew` works — wrapper JAR and scripts not committed (generated locally)
+---
+
+## [06/05/2026 21:00] - US-007
+- What was implemented: Data models (PlaybackState, UiState) and PlaybackViewModel with WebSocket connect/parse/expose StateFlow
+- Files changed: android/app/src/main/java/com/mediacontrol/app/model/PlaybackState.kt, android/app/src/main/java/com/mediacontrol/app/model/UiState.kt, android/app/src/main/java/com/mediacontrol/app/viewmodel/PlaybackViewModel.kt, android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: `kotlinx.serialization.json.buildJsonObject` with `put()` used for building command JSON in ViewModel
+  - Patterns discovered: ViewModel stores `token` as field for command authentication
+  - Gotchas encountered: `sendCommand` must include `token` field in command payload for server validation
+  - Gotchas encountered: `gradle wrapper` requires JDK 17; Java 26 causes "26.0.1" error from Gradle 8.x
+  - Gotchas encountered: AGP 8.2.2 auto-installs missing build-tools (34.0.0) during first build
+   - Useful context: `compileDebugKotlin` passes without emulator — just validates Kotlin compilation
+---
+
+## [06/05/2026 22:00] - US-008
+- What was implemented: Dynamic mesh gradient background using Coil + Palette API for album art color extraction and animated Canvas blobs
+- Files changed: android/app/src/main/java/com/mediacontrol/app/ui/MeshGradientBackground.kt, android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Canvas-based animated background uses `rememberInfiniteTransition` with tween animation spec and `RepeatMode.Reverse` for smooth blob oscillation
+  - Patterns discovered: Coil `ImageLoader.execute(request).drawable` returns `Drawable`, not Bitmap — must cast via `BitmapDrawable.cast()` to get Bitmap for Palette API
+  - Gotchas encountered: `ANDROID_HOME` must be set (system default was `/opt/android-sdk` but actual SDK at `/home/marcelo/android-sdk`)
+  - Useful context: Palette API provides `darkVibrantSwatch`, `vibrantSwatch`, `lightVibrantSwatch`, `darkMutedSwatch`, `mutedSwatch` for color extraction
+  - Useful context: Use `Color(it.rgb)` to convert palette swatch int to Compose Color
+   - Useful context: Blob positions animated as relative offsets (0 to 1), scaled by canvas size at draw time
+---
+
+## [06/05/2026 23:00] - US-009
+- What was implemented: Player Mode UI — 50/50 landscape layout with album art, metadata, progress bar, and playback controls
+- Files changed: android/app/src/main/java/com/mediacontrol/app/ui/PlayerScreen.kt (new), android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/app/build.gradle.kts, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: PlayerScreen composable receives UiState + onCommand callback + onToggleLyrics callback
+  - Patterns discovered: Slider with local `isDragging` state for seekable progress — decouple from live progress during drag
+  - Gotchas encountered: `material-icons-extended` must be added to dependencies for PlayArrow/Pause/SkipNext/SkipPrevious icons
+  - Gotchas encountered: `when(uiState)` branches must be exhaustive; `is UiState.Playing, is UiState.Paused` can share the same PlayerScreen
+  - Useful context: Landscape 50/50 layout uses `Row` with `Modifier.weight(1f)` on each side; left panel uses Column with AsyncImage + Text, right panel uses Column with Slider + IconButtons
+---
+
+## [06/05/2026 23:30] - US-010
+- What was implemented: Lyrics Mode UI — compressed left panel with controls and expanded right panel with scrollable lyrics
+- Files changed: android/app/src/main/java/com/mediacontrol/app/ui/LyricsScreen.kt (new), android/app/src/main/java/com/mediacontrol/app/ui/FormatUtils.kt (new), android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/app/src/main/java/com/mediacontrol/app/ui/PlayerScreen.kt, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: `formatTime` extracted to shared `FormatUtils.kt` for reuse across PlayerScreen and LyricsScreen
+  - Patterns discovered: LyricsScreen follows same composable signature as PlayerScreen `(UiState, onCommand, onToggleLyrics)`
+  - Patterns discovered: Mode toggle managed via `remember { mutableStateOf(false) }` in `MediaControlApp` composable, passed as lambda to both screens
+  - Gotchas encountered: `MutableState<Boolean>` needs `import androidx.compose.runtime.setValue` for `by remember` delegation
+  - Gotchas encountered: `private fun` can't be accessed across files — extract shared utils to internal functions
+  - Useful context: LRC timestamps `[mm:ss.xx]` stripped with `replace(Regex("\\[\\d{2}:\\d{2}\\.?\\d*\\]"), "")` for clean text display
+  - Useful context: 35/65 layout split for lyrics mode (compact player on left, scrollable lyrics on right)
+---
+
+
+## [06/05/2026 23:45] - US-011
+- What was implemented: Karaoke-style synchronized lyrics highlighting — LRC timestamp parsing into timed lines, auto-scroll to current verse, and distinct visual highlighting
+- Files changed: android/app/src/main/java/com/mediacontrol/app/ui/LyricsScreen.kt, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: `LyricsLine` data class carries `timeMs: Long` and `text: String` for timed LRC lines
+  - Patterns discovered: Regex `\[(\d{2}):(\d{2})\.?(\d*)\]` captures minutes, seconds, and fractional seconds; handle 2-digit (centiseconds *10) and 3-digit (milliseconds) precision
+  - Patterns discovered: Karaoke highlighting uses `findCurrentLineIndex()` with `LazyListState.animateScrollToItem()` keyed on `currentLineIndex` for smooth auto-scroll
+  - Gotchas encountered: `animateScrollToItem` called in `LaunchedEffect` — key on `currentLineIndex` so it only fires when the target line changes, not every frame
+  - Gotchas encountered: Lines without timestamps (timeMs=0) are skipped in current line matching to avoid false positives
+   - Useful context: `itemsIndexed` from `androidx.compose.foundation.lazy.itemsIndexed` is needed for indexed rendering in LazyColumn
+   - Useful context: `rememberLazyListState()` provides stable list state for scroll control across recompositions
+---
+
+## [06/05/2026 23:59] - US-012
+- What was implemented: Mode transitions with animated crossfade/slide, animated entry for album art and text on track change, WebSocket reconnection with exponential backoff, and screen-wake reconnection via lifecycle observer
+- Files changed: android/app/build.gradle.kts, android/app/src/main/java/com/mediacontrol/app/MainActivity.kt, android/app/src/main/java/com/mediacontrol/app/websocket/WebSocketClient.kt, android/app/src/main/java/com/mediacontrol/app/viewmodel/PlaybackViewModel.kt, android/app/src/main/java/com/mediacontrol/app/ui/PlayerScreen.kt, android/app/src/main/java/com/mediacontrol/app/ui/LyricsScreen.kt, android/AGENTS.md, prd.json, progress.txt
+- **Learnings for future iterations:**
+  - Patterns discovered: Use `AnimatedContent` with `slideInHorizontally` + `fadeIn` togetherWith `slideOutHorizontally` + `fadeOut` for mode transitions in `MediaControlApp`
+  - Patterns discovered: Use `AnimatedContent` with `fadeIn() togetherWith fadeOut()` for track change animations on album art and metadata; wrap `AsyncImage` in a `Box` to hold `weight` modifier outside `AnimatedContent`
+  - Patterns discovered: WebSocket auto-reconnection implemented directly in `WebSocketClient` with exponential backoff (1s base, 30s cap, shift up to 5); use `CoroutineScope` for scheduling retries
+  - Patterns discovered: Screen-wake reconnection via `DisposableEffect` + `LocalLifecycleOwner.current` in `MainActivity`, observing `Lifecycle.Event.ON_START`
+  - Gotchas encountered: `viewModelScope` from `lifecycle-viewmodel-ktx:2.7.0` was not resolving despite adding the dependency — used a custom `CoroutineScope(SupervisorJob() + Dispatchers.Main)` instead
+  - Gotchas encountered: `AnimatedContent` wraps content in a `Box` internally, so `weight` modifiers don't work inside it — wrap the `AnimatedContent` in a parent `Box` with the weight modifier
+  - Useful context: `onScreenWake()` in ViewModel checks if state is `Disconnected` or `Error` before reconnecting to avoid duplicate connections
+  - Useful context: `DisposableEffect` properly cleans up the lifecycle observer via `onDispose` to prevent leaks
+---
