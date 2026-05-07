@@ -74,6 +74,13 @@ class PlaybackViewModel : ViewModel() {
 
     private fun handleMessage(message: String) {
         try {
+            if (message.contains("\"error\"")) {
+                val errorObj = json.decodeFromString<Map<String, String>>(message)
+                val errorMsg = errorObj["error"] ?: "Unknown error"
+                Log.w(TAG, "Server error: $errorMsg")
+                _uiState.value = UiState.Error(errorMsg)
+                return
+            }
             val playbackState = json.decodeFromString<PlaybackState>(message)
             val state = when (playbackState.status) {
                 "Playing" -> UiState.Playing(playbackState)

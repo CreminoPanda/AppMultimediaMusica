@@ -31,7 +31,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        buildConfigField("String", "WS_HOST", "\"192.168.1.100\"")
+        buildConfigField("String", "WS_HOST", "\"192.168.100.8\"")
         buildConfigField("int", "WS_PORT", "8765")
         buildConfigField("String", "WS_TOKEN", "\"media_control_secret\"")
     }

@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 
 import websockets
 from websockets.asyncio.server import ServerConnection
@@ -10,7 +10,7 @@ from websockets.exceptions import ConnectionClosed
 from src.auth import verify_token
 from src.config import HOST, PORT, SECRET_TOKEN
 from src.lrclib import search_lyrics
-from src.playerctl import (
+from src.player_backend import (
     PlaybackEvent,
     PlaybackStatus,
     find_player_instance,
@@ -30,9 +30,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+_PLAYER_POLL_INTERVAL = 10
+
 clients: set[ServerConnection] = set()
 player_instance: str | None = None
 last_payload: dict[str, object] | None = None
+monitor_task: asyncio.Task[None] | None = None
 
 
 async def broadcast(payload: dict[str, object]) -> None:
@@ -75,13 +78,53 @@ async def build_payload(event: PlaybackEvent, instance: str) -> dict[str, object
 async def monitor_and_broadcast(instance: str) -> None:
     global last_payload
     logger.info("Started playback monitor for %s", instance)
-    try:
-        async for event in monitor_player(instance):
-            payload = await build_payload(event, instance)
-            last_payload = payload
-            await broadcast(payload)
-    except Exception:
-        logger.exception("Playback monitor crashed")
+    while True:
+        try:
+            async for event in monitor_player(instance):
+                payload = await build_payload(event, instance)
+                last_payload = payload
+                await broadcast(payload)
+        except asyncio.CancelledError:
+            raise
+        except FileNotFoundError:
+            logger.warning("playerctl not found, monitor stopped")
+            return
+        except Exception:
+            logger.exception("Playback monitor crashed, restarting in 5s")
+            await asyncio.sleep(5)
+
+
+async def start_monitor(instance: str) -> None:
+    global monitor_task, player_instance
+    stop_monitor()
+    player_instance = instance
+    monitor_task = asyncio.create_task(monitor_and_broadcast(instance))
+
+
+def stop_monitor() -> None:
+    global monitor_task, player_instance
+    if monitor_task is not None:
+        monitor_task.cancel()
+        monitor_task = None
+    player_instance = None
+
+
+async def _watch_player() -> None:
+    global player_instance
+    while True:
+        try:
+            await asyncio.sleep(_PLAYER_POLL_INTERVAL)
+            instance = await find_player_instance()
+            if instance and instance != player_instance:
+                logger.info("Found new player instance: %s", instance)
+                await start_monitor(instance)
+            elif not instance and player_instance is not None:
+                logger.info("Player instance lost, stopping monitor")
+                stop_monitor()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Player watcher error")
 
 
 async def handle_command(
@@ -96,18 +139,21 @@ async def handle_command(
     value = data.get("value")
     position = float(value) if isinstance(value, (int, float)) else 0.0
 
-    command_map: dict[str, Awaitable[None]] = {
-        "play": send_play(instance),
-        "pause": send_pause(instance),
-        "play_pause": send_play_pause(instance),
-        "next": send_next(instance),
-        "previous": send_previous(instance),
-        "seek": send_seek(instance, position),
+    command_map: dict[str, Callable[..., Awaitable[None]]] = {
+        "play": send_play,
+        "pause": send_pause,
+        "play_pause": send_play_pause,
+        "next": send_next,
+        "previous": send_previous,
+        "seek": send_seek,
     }
 
-    cmd = command_map.get(action)
-    if cmd is not None:
-        await cmd
+    cmd_fn = command_map.get(action)
+    if cmd_fn is not None:
+        if action == "seek":
+            await cmd_fn(instance, position)
+        else:
+            await cmd_fn(instance)
     else:
         await ws.send(json.dumps({"error": f"Unknown action: {action}"}))
 
@@ -164,15 +210,21 @@ async def main() -> None:
     logger.info("Starting MediaControl WebSocket server on %s:%s", HOST, PORT)
     logger.info("SECRET_TOKEN: %s", SECRET_TOKEN)
 
-    player_instance = await find_player_instance()
-    if player_instance:
-        logger.info("Found player instance: %s", player_instance)
-        asyncio.create_task(monitor_and_broadcast(player_instance))
+    instance = await find_player_instance()
+    if instance:
+        logger.info("Found player instance: %s", instance)
+        await start_monitor(instance)
     else:
-        logger.warning("No player instance found")
+        logger.warning("No player instance found, will poll periodically")
 
-    async with websockets.serve(handler, HOST, PORT):
-        await asyncio.get_running_loop().create_future()
+    watcher_task = asyncio.create_task(_watch_player())
+
+    try:
+        async with websockets.serve(handler, HOST, PORT):
+            await asyncio.get_running_loop().create_future()
+    finally:
+        watcher_task.cancel()
+        stop_monitor()
 
 
 if __name__ == "__main__":

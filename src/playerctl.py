@@ -12,6 +12,16 @@ logger = logging.getLogger(__name__)
 _DASH_RE = re.compile(r"\s*[—–-]\s+")
 
 
+async def _run_playerctl(*args: str) -> str:
+    proc = await asyncio.create_subprocess_exec(
+        "playerctl", *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, _ = await proc.communicate()
+    return stdout.decode().strip()
+
+
 class PlaybackStatus(Enum):
     Playing = "Playing"
     Paused = "Paused"
@@ -33,20 +43,6 @@ class PlaybackEvent:
     track: TrackInfo = field(default_factory=TrackInfo)
 
 
-async def find_player_instance() -> str | None:
-    proc = await asyncio.create_subprocess_exec(
-        "playerctl", "-l",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, _ = await proc.communicate()
-    for line in stdout.decode().strip().splitlines():
-        stripped = line.strip()
-        if stripped.startswith("brave.instance"):
-            return stripped
-    return None
-
-
 def parse_metadata(raw: str) -> TrackInfo:
     if not raw:
         return TrackInfo()
@@ -57,21 +53,12 @@ def parse_metadata(raw: str) -> TrackInfo:
 
 
 async def get_player_metadata(instance: str) -> TrackInfo:
-    proc = await asyncio.create_subprocess_exec(
-        "playerctl", "--player", instance, "metadata", "--format", "{{title}} — {{artist}}",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+    meta_out, album_out = await asyncio.gather(
+        _run_playerctl("--player", instance, "metadata", "--format", "{{title}} — {{artist}}"),
+        _run_playerctl("--player", instance, "metadata", "--format", "{{album}}"),
     )
-    stdout, _ = await proc.communicate()
-    track = parse_metadata(stdout.decode().strip())
-
-    proc_album = await asyncio.create_subprocess_exec(
-        "playerctl", "--player", instance, "metadata", "--format", "{{album}}",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout_album, _ = await proc_album.communicate()
-    track.album = stdout_album.decode().strip()
+    track = parse_metadata(meta_out)
+    track.album = album_out
 
     if track.title:
         enriched = await search_track(track.title, track.artist)
@@ -81,15 +68,9 @@ async def get_player_metadata(instance: str) -> TrackInfo:
 
 
 async def get_player_status(instance: str) -> PlaybackStatus:
-    proc = await asyncio.create_subprocess_exec(
-        "playerctl", "--player", instance, "status",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, _ = await proc.communicate()
-    status_str = stdout.decode().strip()
+    stdout = await _run_playerctl("--player", instance, "status")
     try:
-        return PlaybackStatus(status_str)
+        return PlaybackStatus(stdout)
     except ValueError:
         return PlaybackStatus.Stopped
 
@@ -131,13 +112,7 @@ async def monitor_player(instance: str) -> AsyncIterator[PlaybackEvent]:
 
 
 async def get_position(instance: str) -> int:
-    proc = await asyncio.create_subprocess_exec(
-        "playerctl", "--player", instance, "position",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, _ = await proc.communicate()
-    raw = stdout.decode().strip()
+    raw = await _run_playerctl("--player", instance, "position")
     try:
         return int(float(raw) * 1000)
     except (ValueError, TypeError):
@@ -150,6 +125,18 @@ async def send_command(instance: str, *args: str) -> None:
         stdout=asyncio.subprocess.DEVNULL,
         stderr=asyncio.subprocess.DEVNULL,
     )
+
+
+async def find_player_instance() -> str | None:
+    try:
+        stdout = await _run_playerctl("-l")
+    except Exception:
+        return None
+    for line in stdout.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("brave.instance"):
+            return stripped
+    return None
 
 
 async def send_play(instance: str) -> None:

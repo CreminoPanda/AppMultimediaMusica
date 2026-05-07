@@ -1,0 +1,13 @@
+pyproject.toml
+src/__init__.py
+src/auth.py
+src/config.py
+src/itunes.py
+src/playerctl.py
+src/server.py
+src/media_control.egg-info/PKG-INFO
+src/media_control.egg-info/SOURCES.txt
+src/media_control.egg-info/dependency_links.txt
+src/media_control.egg-info/top_level.txt
+tests/test_itunes.py
+tests/test_playerctl.py

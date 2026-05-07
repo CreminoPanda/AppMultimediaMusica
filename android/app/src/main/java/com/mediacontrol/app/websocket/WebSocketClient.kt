@@ -28,6 +28,7 @@ class WebSocketClient(
     companion object {
         private const val BASE_DELAY_MS = 1000L
         private const val MAX_DELAY_MS = 30000L
+        private const val MAX_RETRIES = 10
     }
 
     private val client = OkHttpClient.Builder()
@@ -64,6 +65,11 @@ class WebSocketClient(
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 if (!authenticated) {
+                    if (text.contains("\"error\"")) {
+                        onStateChanged(ConnectionState.Error("Auth failed: $text"))
+                        webSocket.close(1000, "Auth failed")
+                        return
+                    }
                     authenticated = true
                     retryCount = 0
                     onStateChanged(ConnectionState.Connected)
@@ -88,6 +94,11 @@ class WebSocketClient(
     private fun scheduleReconnect() {
         reconnectJob?.cancel()
         if (!shouldReconnect) return
+        if (retryCount >= MAX_RETRIES) {
+            logger("Max retries reached ($MAX_RETRIES), stopping reconnect")
+            onStateChanged(ConnectionState.Error("Max retries reached"))
+            return
+        }
 
         val delayMs = calculateDelay()
         retryCount++
@@ -97,6 +108,10 @@ class WebSocketClient(
                 doConnect()
             }
         }
+    }
+
+    private fun logger(msg: String) {
+        android.util.Log.i("WebSocketClient", msg)
     }
 
     private fun calculateDelay(): Long {
