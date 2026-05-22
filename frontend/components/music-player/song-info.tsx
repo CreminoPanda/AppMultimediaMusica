@@ -52,19 +52,19 @@ export function SongInfo({
         transition={{ delay: 0.3, duration: 0.6 }}
       >
         <motion.h1
-          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight text-shadow text-balance"
+          className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-white tracking-tight text-shadow text-balance"
           layout
         >
           {title}
         </motion.h1>
         <motion.p
-          className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white/80 font-medium"
+          className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-white/80 font-medium"
           layout
         >
           {artist}
         </motion.p>
         <motion.p
-          className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/50 font-normal"
+          className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl text-white/50 font-normal"
           layout
         >
           {album}
@@ -82,19 +82,19 @@ export function SongInfo({
         transition={{ delay: 0.3, duration: 0.6 }}
       >
         <motion.h1
-          className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight text-shadow text-balance"
+          className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight text-shadow text-balance"
           layout
         >
           {title}
         </motion.h1>
         <motion.p
-          className="text-base sm:text-lg md:text-xl lg:text-2xl text-white/80 font-medium"
+          className="text-sm sm:text-base md:text-lg lg:text-xl text-white/80 font-medium"
           layout
         >
           {artist}
         </motion.p>
         <motion.p
-          className="text-sm sm:text-base md:text-lg lg:text-xl text-white/50 font-normal"
+          className="text-xs sm:text-sm md:text-base lg:text-lg text-white/50 font-normal"
           layout
         >
           {album}
@@ -112,19 +112,19 @@ export function SongInfo({
       transition={{ delay: 0.3, duration: 0.6 }}
     >
       <motion.h1
-        className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold text-white tracking-tight text-shadow text-balance"
+        className="text-base sm:text-lg md:text-xl lg:text-2xl font-semibold text-white tracking-tight text-shadow text-balance"
         layout
       >
         {title}
       </motion.h1>
       <motion.p
-        className="text-sm sm:text-base md:text-lg lg:text-xl text-white/80 font-medium"
+        className="text-xs sm:text-sm md:text-base lg:text-lg text-white/80 font-medium"
         layout
       >
         {artist}
       </motion.p>
       <motion.p
-        className="text-xs sm:text-sm md:text-base lg:text-lg text-white/50 font-normal"
+        className="text-[10px] sm:text-xs md:text-sm lg:text-base text-white/50 font-normal"
         layout
       >
         {album}

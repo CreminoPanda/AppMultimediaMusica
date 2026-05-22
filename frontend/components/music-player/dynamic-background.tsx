@@ -23,8 +23,11 @@ export function DynamicBackground({ colors }: DynamicBackgroundProps) {
     if (!ctx) return;
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      // Downsample the canvas resolution to drastically reduce the number of pixels to compute
+      // A smaller canvas width/height (scaled up via CSS with blur) runs much faster on WebViews.
+      const scaleFactor = 0.3; // 30% of actual screen width/height
+      canvas.width = Math.max(300, window.innerWidth * scaleFactor);
+      canvas.height = Math.max(200, window.innerHeight * scaleFactor);
     };
     resize();
     window.addEventListener("resize", resize);
@@ -81,11 +84,16 @@ export function DynamicBackground({ colors }: DynamicBackgroundProps) {
       {/* Animated canvas for dynamic colors */}
       <motion.canvas
         ref={canvasRef}
-        className="absolute inset-0"
+        className="absolute inset-0 w-full h-full"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.6 }}
+        animate={{ opacity: 0.55 }}
         transition={{ duration: 1.5 }}
-        style={{ filter: "blur(100px)" }}
+        style={{ 
+          filter: "blur(60px)", // reduced from 100px since the canvas is physically smaller (downsampled), 60px provides equal blur ratio
+          transform: "translate3d(0,0,0)", // force GPU acceleration
+          willChange: "transform, opacity",
+          imageRendering: "auto",
+        }}
       />
 
       {/* Mesh gradient overlay */}

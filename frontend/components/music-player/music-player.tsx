@@ -107,7 +107,7 @@ export function MusicPlayer() {
               /* ========== PLAYER MODE ========== */
               <motion.div
                 key="player-mode"
-                className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-16 lg:gap-20 xl:gap-24 px-6 md:px-8 w-full max-w-7xl mx-auto"
+                className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-10 lg:gap-16 xl:gap-20 px-6 md:px-8 w-full max-w-7xl mx-auto"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
@@ -132,7 +132,7 @@ export function MusicPlayer() {
                 {/* Info + Controls + Progress */}
                 <motion.div
                   layout
-                  className="flex flex-col gap-4 md:gap-8 flex-1 min-w-0 w-full md:w-auto items-center md:items-start"
+                  className="flex flex-col gap-4 md:gap-5 lg:gap-6 flex-1 min-w-0 w-full md:w-auto items-center md:items-start"
                   transition={layoutTransition}
                 >
                   <SongInfo
@@ -176,12 +176,12 @@ export function MusicPlayer() {
                 {/* Left: Info + Controls */}
                 <motion.div
                   layout
-                  className="w-full md:w-[35%] h-auto md:h-full flex flex-col items-center justify-center p-4 md:p-6 lg:p-8"
+                  className="w-full md:w-[32%] h-auto md:h-full flex flex-col items-center justify-center p-4 md:p-5 lg:p-6"
                   initial={{ x: -50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ ...springTransition, delay: 0.1 }}
                 >
-                  <div className="flex flex-col items-center gap-4 md:gap-6 w-full max-w-sm">
+                  <div className="flex flex-col items-center gap-4 md:gap-4 lg:gap-5 w-full max-w-sm">
                     {/* Small screens: row layout */}
                     <div className="flex items-center gap-3 w-full md:hidden">
                       <motion.div
@@ -209,7 +209,7 @@ export function MusicPlayer() {
                     </div>
 
                     {/* Large screens: stacked layout */}
-                    <div className="hidden md:flex flex-col items-center gap-5 w-full">
+                    <div className="hidden md:flex flex-col items-center gap-4 lg:gap-5 w-full">
                       <motion.div
                         layout="position"
                         className="flex-shrink-0"
@@ -256,7 +256,7 @@ export function MusicPlayer() {
                 {/* Right: Lyrics */}
                 <motion.div
                   layout
-                  className="w-full md:w-[65%] h-[50vh] md:h-full flex items-center justify-center p-4 md:p-6 lg:p-8"
+                  className="w-full md:w-[68%] h-[50vh] md:h-full flex items-center justify-center p-4 md:p-5 lg:p-6"
                   initial={{ x: 100, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ ...springTransition, delay: 0.2 }}
