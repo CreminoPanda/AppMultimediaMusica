@@ -1,2 +1,21 @@
+# Dependencias
 node_modules/
+
+# Variables de entorno (contienen credenciales privadas)
 .env
+.env.*
+
+# Base de datos SQLite (datos de usuarios)
+*.db
+*.db-shm
+*.db-wal
+
+# Certificados SSL locales (no deben subirse nunca)
+*.pem
+
+# Logs del servidor
+*.log
+server.log
+
+# Scripts de prueba local (no necesarios en producción)
+test_*.js

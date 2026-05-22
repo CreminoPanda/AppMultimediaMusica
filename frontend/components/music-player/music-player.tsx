@@ -16,18 +16,22 @@ const springTransition = {
   type: "spring",
   stiffness: 200,
   damping: 25,
-};
+} as const;
 
 const layoutTransition = {
   type: "spring",
   stiffness: 300,
   damping: 30,
   mass: 0.8,
-};
+} as const;
 
 const defaultColors = ["#e11d48", "#7c3aed", "#0ea5e9"];
 
-export function MusicPlayer() {
+interface MusicPlayerProps {
+  onLogout: () => void;
+}
+
+export function MusicPlayer({ onLogout }: MusicPlayerProps) {
   const {
     nowPlaying,
     currentTime,
@@ -81,9 +85,10 @@ export function MusicPlayer() {
   if (error) {
     return (
       <div className="relative w-full h-screen flex items-center justify-center bg-[#0a0a0f]">
+        <AuthStatus onLogout={onLogout} isKaraoke={isKaraokeMode} />
         <div className="text-center space-y-4 px-6">
           <p className="text-red-400 text-lg">{error}</p>
-          <p className="text-white/50">Asegurate de que el backend esté corriendo en puerto 3001</p>
+          <p className="text-white/50">Asegúrate de que el backend esté corriendo en el puerto 3001</p>
         </div>
       </div>
     );
@@ -91,7 +96,7 @@ export function MusicPlayer() {
 
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      <AuthStatus />
+      <AuthStatus onLogout={onLogout} isKaraoke={isKaraokeMode} />
       <DynamicBackground colors={colors} />
 
       <div className="noise-overlay" />

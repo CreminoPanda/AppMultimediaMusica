@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 
 interface AlbumArtworkProps {
-  src: string;
+  src?: string;
   alt: string;
   dominantColor?: string;
   colors?: string[];

@@ -22,6 +22,24 @@ export function useSpotifyPlayer(pollInterval = 2000) {
     try {
       const data = await getNowPlaying();
       if (data.error) {
+        const lowerError = data.error.toLowerCase();
+        // If it is a Spotify linkage or session error, show the default state rather than blocking the UI
+        if (
+          lowerError.includes("vincul") || 
+          lowerError.includes("spotify") || 
+          lowerError.includes("sesion") || 
+          lowerError.includes("sesión") ||
+          lowerError.includes("token")
+        ) {
+          setError(null);
+          setNowPlaying({ 
+            isPlaying: false, 
+            title: "Sin vinculación", 
+            artists: ["Conecta Spotify arriba a la derecha"],
+            album: "Spotify"
+          });
+          return;
+        }
         setError(data.error);
         return;
       }
