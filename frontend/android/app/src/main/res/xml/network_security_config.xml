@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permite el certificado autofirmado del backend local para desarrollo -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">192.168.100.8</domain>
+        <trust-anchors>
+            <!-- Confiar en el certificado autofirmado del servidor local -->
+            <certificates src="@raw/cert"/>
+            <!-- También confiar en las CAs del sistema (para otras conexiones HTTPS) -->
+            <certificates src="system"/>
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

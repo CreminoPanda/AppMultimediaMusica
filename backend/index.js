@@ -1,22 +1,34 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
+const https = require('https');
+const fs = require('fs');
 const cors = require('cors');
 const crypto = require('crypto');
 const querystring = require('querystring');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { dbRun, dbGet, dbAll } = require('./database');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'mi_clave_secreta_super_segura';
+if (!process.env.JWT_SECRET) {
+  console.error('ERROR: JWT_SECRET no está definido en .env. Deteniendo servidor.');
+  process.exit(1);
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const app = express();
 
+app.use(helmet());
+
 const allowedOrigins = [
-  'http://localhost',            // Origen de Capacitor (Android APK)
-  'capacitor://localhost',      // Origen de Capacitor (iOS)
-  'http://localhost:3000',      // Entorno de desarrollo Next.js
-  'http://192.168.100.8:3000',  // IP Local de desarrollo Next.js
+  'http://localhost',
+  'capacitor://localhost',
+  'http://localhost:3000',
+  'http://192.168.100.8:3000',
+  'https://192.168.100.8:3000',
+  'https://192.168.100.8:3001',
 ];
 
 app.use(cors({
@@ -30,7 +42,23 @@ app.use(cors({
   }
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10kb' }));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const strictLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: 'Demasiados intentos. Intenta de nuevo en 1 hora.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Middleware de autenticación JWT
 function authenticateToken(req, res, next) {
@@ -62,13 +90,18 @@ function isValidPassword(password) {
   return hasUppercase && hasLowercase && hasSpecialChar;
 }
 
-// Generador de códigos OTP de 6 dígitos
+function timingSafeCompare(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 999999).toString();
 }
 
 // Ruta de Registro de Usuario
-app.post('/register', async (req, res) => {
+app.post('/register', authLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email y contraseña requeridos' });
@@ -95,8 +128,6 @@ app.post('/register', async (req, res) => {
     const otp = generateOTP();
     const otpExpires = Date.now() + 15 * 60 * 1000; // Expira en 15 minutos
 
-    console.log(`[AUTH] OTP generado para registro de ${normalizedEmail}: ${otp}`);
-
     // Insertar usuario inactivo (is_verified = 0)
     await dbRun(
       'INSERT INTO users (email, password_hash, is_verified, verification_code, verification_code_expires) VALUES (?, ?, ?, ?, ?)',
@@ -109,12 +140,12 @@ app.post('/register', async (req, res) => {
 
     res.status(201).json({ message: 'Usuario registrado con éxito. Por favor verifica tu correo para activar tu cuenta.' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al registrar el usuario', details: err.message });
+    res.status(500).json({ error: 'Error al registrar el usuario' });
   }
 });
 
 // Ruta para Verificar Cuenta
-app.post('/verify', async (req, res) => {
+app.post('/verify', authLimiter, async (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) {
     return res.status(400).json({ error: 'Email y código requeridos' });
@@ -131,7 +162,7 @@ app.post('/verify', async (req, res) => {
       return res.status(400).json({ error: 'La cuenta ya está verificada' });
     }
 
-    if (user.verification_code !== code) {
+    if (!timingSafeCompare(user.verification_code, code)) {
       return res.status(400).json({ error: 'Código de verificación incorrecto' });
     }
 
@@ -147,12 +178,12 @@ app.post('/verify', async (req, res) => {
 
     res.json({ message: 'Cuenta verificada con éxito. Ya puedes iniciar sesión.' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al verificar la cuenta', details: err.message });
+    res.status(500).json({ error: 'Error al verificar la cuenta' });
   }
 });
 
 // Ruta de Login de Usuario
-app.post('/login', async (req, res) => {
+app.post('/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email y contraseña requeridos' });
@@ -179,15 +210,15 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, email: user.email });
   } catch (err) {
-    res.status(500).json({ error: 'Error en el inicio de sesión', details: err.message });
+    res.status(500).json({ error: 'Error en el inicio de sesión' });
   }
 });
 
 // Ruta para Solicitar Recuperación de Contraseña
-app.post('/forgot-password', async (req, res) => {
+app.post('/forgot-password', strictLimiter, async (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email requerido' });
@@ -207,8 +238,6 @@ app.post('/forgot-password', async (req, res) => {
     const code = generateOTP();
     const codeExpires = Date.now() + 15 * 60 * 1000; // Código válido por 15 minutos
 
-    console.log(`[AUTH] OTP generado para recuperación de contraseña de ${normalizedEmail}: ${code}`);
-
     await dbRun(
       'UPDATE users SET reset_code = ?, reset_code_expires = ? WHERE id = ?',
       [code, codeExpires, user.id]
@@ -220,12 +249,12 @@ app.post('/forgot-password', async (req, res) => {
 
     res.json({ message: 'Código de seguridad enviado a tu correo.' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al solicitar el cambio de contraseña', details: err.message });
+    res.status(500).json({ error: 'Error al solicitar el cambio de contraseña' });
   }
 });
 
 // Ruta para Restablecer Contraseña usando Código
-app.post('/reset-password', async (req, res) => {
+app.post('/reset-password', authLimiter, async (req, res) => {
   const { email, code, newPassword } = req.body;
   if (!email || !code || !newPassword) {
     return res.status(400).json({ error: 'Email, código y nueva contraseña requeridos' });
@@ -248,7 +277,7 @@ app.post('/reset-password', async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    if (user.reset_code !== code) {
+    if (!timingSafeCompare(user.reset_code, code)) {
       return res.status(400).json({ error: 'Código de seguridad incorrecto' });
     }
 
@@ -266,7 +295,7 @@ app.post('/reset-password', async (req, res) => {
 
     res.json({ message: 'Contraseña restablecida con éxito. Ya puedes iniciar sesión con tus nuevas credenciales.' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al restablecer la contraseña', details: err.message });
+    res.status(500).json({ error: 'Error al restablecer la contraseña' });
   }
 });
 
@@ -301,7 +330,7 @@ app.post('/change-password', authenticateToken, async (req, res) => {
 
     res.json({ message: 'Contraseña cambiada con éxito.' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al cambiar la contraseña', details: err.message });
+    res.status(500).json({ error: 'Error al cambiar la contraseña' });
   }
 });
 
@@ -331,13 +360,13 @@ app.delete('/delete-account', authenticateToken, async (req, res) => {
 
     res.json({ message: 'Cuenta eliminada con éxito.' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al eliminar la cuenta', details: err.message });
+    res.status(500).json({ error: 'Error al eliminar la cuenta' });
   }
 });
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
-const REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3001/callback';
+const REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI || 'https://192.168.100.8:3443/callback';
 const PORT = process.env.PORT || 3001;
 
 // Función helper para obtener el token de Spotify del usuario, refrescándolo si ha expirado
@@ -667,7 +696,7 @@ app.get('/spotify/status', authenticateToken, async (req, res) => {
     const tokenRow = await dbGet('SELECT 1 FROM spotify_tokens WHERE user_id = ?', [userId]);
     res.json({ authed: !!tokenRow });
   } catch (err) {
-    res.status(500).json({ error: 'Error al consultar el estado de Spotify', details: err.message });
+    res.status(500).json({ error: 'Error al consultar el estado de Spotify' });
   }
 });
 
@@ -678,7 +707,7 @@ app.post('/spotify/disconnect', authenticateToken, async (req, res) => {
     await dbRun('DELETE FROM spotify_tokens WHERE user_id = ?', [userId]);
     res.json({ success: true, message: 'Spotify desvinculado con éxito' });
   } catch (err) {
-    res.status(500).json({ error: 'Error al desvincular Spotify', details: err.message });
+    res.status(500).json({ error: 'Error al desvincular Spotify' });
   }
 });
 
@@ -791,9 +820,19 @@ app.put('/seek', authenticateToken, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor: http://localhost:${PORT}`);
-  console.log(`Spotify Redirect URI cargado: ${REDIRECT_URI}`);
+const SSL_PORT = 3443;
+const sslOptions = {
+  key: fs.readFileSync(path.join(__dirname, 'key.pem')),
+  cert: fs.readFileSync(path.join(__dirname, 'cert.pem'))
+};
+
+https.createServer(sslOptions, app).listen(SSL_PORT, () => {
+  console.log(`Servidor HTTPS: https://192.168.100.8:${SSL_PORT}`);
+  console.log(`Spotify Redirect URI: ${REDIRECT_URI}`);
   if (!CLIENT_ID || CLIENT_ID === 'tu_client_id_aqui') console.log('Configura .env con SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET');
-  else console.log('Autentica en http://localhost:' + PORT + '/login');
+  else console.log('Autentica en https://192.168.100.8:' + SSL_PORT + '/login');
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor HTTP: http://192.168.100.8:${PORT}`);
 });
