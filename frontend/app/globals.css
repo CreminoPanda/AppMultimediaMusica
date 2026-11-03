@@ -210,3 +210,85 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
+/* Vinyl rotation: pauses at its current angle when the animation-play-state
+   switches to paused, so resuming continues from the same point. */
+@keyframes vinyl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vinyl-spin {
+  animation: vinyl-spin 24s linear infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vinyl-spin {
+    animation: none !important;
+  }
+}
+
+/* Compact range inputs used by the volume mixer. */
+.mixer-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  touch-action: none;
+}
+
+.mixer-range::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    #34d399 0%,
+    #34d399 var(--range-progress, 0%),
+    rgba(255, 255, 255, 0.14) var(--range-progress, 0%),
+    rgba(255, 255, 255, 0.14) 100%
+  );
+}
+
+.mixer-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -7.5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.mixer-range::-moz-range-track {
+  height: 5px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.mixer-range::-moz-range-progress {
+  height: 5px;
+  border-radius: 9999px;
+  background: #34d399;
+}
+
+.mixer-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.mixer-range:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 4px;
+  border-radius: 9999px;
+}
+
+/* The library uses its own clear button. */
+input[type="search"]::-webkit-search-cancel-button {
+  display: none;
+}
+

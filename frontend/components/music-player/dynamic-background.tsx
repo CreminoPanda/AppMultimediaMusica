@@ -79,7 +79,7 @@ export function DynamicBackground({ colors }: DynamicBackgroundProps) {
   return (
     <div className="fixed inset-0 overflow-hidden">
       {/* Base dark gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0f] via-[#111118] to-[#0d0d12]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#141220] via-[#111118] to-[#0d0d12]" />
 
       {/* Animated canvas for dynamic colors */}
       <motion.canvas
@@ -129,17 +129,8 @@ export function DynamicBackground({ colors }: DynamicBackgroundProps) {
         }}
       />
 
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
-
-      {/* Vignette effect */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)",
-        }}
-      />
+      {/* Dark overlay for readability, kept off the top header area */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
     </div>
   );
 }

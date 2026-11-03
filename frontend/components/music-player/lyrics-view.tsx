@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { useCallback, useEffect, useRef } from "react";
 
 interface Lyric {
   time: number;
@@ -26,33 +26,65 @@ export function LyricsView({
   songChanged = 0,
 }: LyricsViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const previousIndexRef = useRef(-1);
+  const recenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reduceMotion = useReducedMotion();
 
   const currentLyricIndex = lyrics.findIndex((lyric, index) => {
     const next = lyrics[index + 1];
     return currentTime >= lyric.time && (!next || currentTime < next.time);
   });
 
-  useEffect(() => {
-    if (songChanged > 0) {
-      previousIndexRef.current = -1;
-    }
-  }, [songChanged]);
+  const currentIndexRef = useRef(currentLyricIndex);
+  currentIndexRef.current = currentLyricIndex;
 
-  useEffect(() => {
-    if (!isVisible || currentLyricIndex < 0) return;
-    if (currentLyricIndex === previousIndexRef.current) return;
-    previousIndexRef.current = currentLyricIndex;
-
+  const centerActive = useCallback((behavior: ScrollBehavior) => {
     const container = containerRef.current;
-    if (!container) return;
+    const index = currentIndexRef.current;
+    if (!container || index < 0) return;
 
-    const active = container.querySelector(`[data-lyric-index="${currentLyricIndex}"]`) as HTMLElement;
+    const active = container.querySelector(
+      `[data-lyric-index="${index}"]`,
+    ) as HTMLElement | null;
     if (!active) return;
 
-    const target = active.offsetTop - container.clientHeight / 2 + active.offsetHeight / 2;
-    container.scrollTop = target;
-  }, [currentLyricIndex, isVisible]);
+    const target =
+      active.offsetTop - container.clientHeight / 2 + active.offsetHeight / 2;
+    if (Math.abs(container.scrollTop - target) < 2) return;
+
+    container.scrollTo({ top: target, behavior });
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
+    // Wait one frame so the active line already has its final size.
+    const frame = requestAnimationFrame(() =>
+      centerActive(reduceMotion ? "auto" : "smooth"),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [
+    currentLyricIndex,
+    isVisible,
+    lyrics.length,
+    songChanged,
+    reduceMotion,
+    centerActive,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+    };
+  }, []);
+
+  // After the user scrolls freely, return to the current line.
+  const handleScroll = () => {
+    if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
+    recenterTimerRef.current = setTimeout(
+      () => centerActive(reduceMotion ? "auto" : "smooth"),
+      2500,
+    );
+  };
 
   if (lyrics.length === 0) {
     return (
@@ -80,9 +112,10 @@ export function LyricsView({
           scrollbarWidth: "none",
           msOverflowStyle: "none",
           overscrollBehavior: "none",
+          touchAction: "pan-y",
+          WebkitOverflowScrolling: "touch",
         }}
-        onWheel={(e) => e.preventDefault()}
-        onTouchMove={(e) => e.preventDefault()}
+        onScroll={handleScroll}
       >
         <style>{`div::-webkit-scrollbar{display:none}`}</style>
         <div>

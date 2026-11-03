@@ -2,27 +2,29 @@
 
 import { useState, useEffect } from "react";
 import { MusicPlayer } from "@/components/music-player/music-player";
-import { AuthContainer } from "@/components/auth-container";
+import { ServerSetup } from "@/components/server-setup";
+import {
+  clearPlayerServerUrl,
+  getPlayerServerUrl,
+  normalizeServerUrl,
+} from "@/lib/api";
 
 export default function Home() {
-  const [token, setToken] = useState<string | null>(null);
+  const [serverUrl, setServerUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for token on client mount
-    const savedToken = localStorage.getItem("music_player_token");
-    setToken(savedToken);
+    setServerUrl(getPlayerServerUrl());
     setLoading(false);
   }, []);
 
-  const handleAuthSuccess = (newToken: string) => {
-    setToken(newToken);
+  const handleConfigured = (url: string) => {
+    setServerUrl(normalizeServerUrl(url));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("music_player_token");
-    localStorage.removeItem("music_player_email");
-    setToken(null);
+  const handleChangeServer = () => {
+    clearPlayerServerUrl();
+    setServerUrl(null);
   };
 
   if (loading) {
@@ -35,10 +37,13 @@ export default function Home() {
 
   return (
     <main className="min-h-screen">
-      {token ? (
-        <MusicPlayer onLogout={handleLogout} />
+      {serverUrl ? (
+        <MusicPlayer
+          serverUrl={serverUrl}
+          onChangeServer={handleChangeServer}
+        />
       ) : (
-        <AuthContainer onAuthSuccess={handleAuthSuccess} />
+        <ServerSetup onConfigured={handleConfigured} />
       )}
     </main>
   );

@@ -88,6 +88,7 @@ export function ProgressBar({
         onMouseLeave={() => setHoverProgress(null)}
         onMouseDown={() => setIsDragging(true)}
         onMouseUp={() => setIsDragging(false)}
+        style={{ touchAction: "none" }}
         role="slider"
         aria-valuemin={0}
         aria-valuemax={duration}
