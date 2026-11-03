@@ -462,7 +462,7 @@ export function MusicPlayer({ serverUrl, onChangeServer }: MusicPlayerProps) {
   );
 
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion="never">
       <div className="relative h-screen w-full overflow-hidden">
         <DynamicBackground colors={colors} />
         <div className="noise-overlay" />

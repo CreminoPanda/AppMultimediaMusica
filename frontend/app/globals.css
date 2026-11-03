@@ -223,12 +223,6 @@
   transform-origin: center;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .vinyl-spin {
-    animation: none !important;
-  }
-}
-
 /* Compact range inputs used by the volume mixer. */
 .mixer-range {
   -webkit-appearance: none;

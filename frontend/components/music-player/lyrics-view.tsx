@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useCallback, useEffect, useRef } from "react";
 
 interface Lyric {
@@ -27,7 +27,6 @@ export function LyricsView({
 }: LyricsViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const recenterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reduceMotion = useReducedMotion();
 
   const currentLyricIndex = lyrics.findIndex((lyric, index) => {
     const next = lyrics[index + 1];
@@ -58,16 +57,13 @@ export function LyricsView({
     if (!isVisible) return;
 
     // Wait one frame so the active line already has its final size.
-    const frame = requestAnimationFrame(() =>
-      centerActive(reduceMotion ? "auto" : "smooth"),
-    );
+    const frame = requestAnimationFrame(() => centerActive("smooth"));
     return () => cancelAnimationFrame(frame);
   }, [
     currentLyricIndex,
     isVisible,
     lyrics.length,
     songChanged,
-    reduceMotion,
     centerActive,
   ]);
 
@@ -81,7 +77,7 @@ export function LyricsView({
   const handleScroll = () => {
     if (recenterTimerRef.current) clearTimeout(recenterTimerRef.current);
     recenterTimerRef.current = setTimeout(
-      () => centerActive(reduceMotion ? "auto" : "smooth"),
+      () => centerActive("smooth"),
       2500,
     );
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const HINT_KEY = "sections_hint_seen";
 const SWIPE_THRESHOLD = 48;
@@ -122,7 +122,6 @@ export function SectionPager({
   swipe,
   children,
 }: SectionPagerProps) {
-  const reduceMotion = useReducedMotion();
   const [indicatorVisible, setIndicatorVisible] = useState(true);
   const [hintSeen, setHintSeen] = useState(true);
   const previousIndexRef = useRef(activeIndex);
@@ -185,10 +184,9 @@ export function SectionPager({
     <div className="relative h-full w-full overflow-hidden">
       {children.map((child, index) => {
         const offset = offsets[index];
-        const transition =
-          reduceMotion || jumped[index]
-            ? { duration: 0 }
-            : { type: "spring" as const, stiffness: 320, damping: 34, mass: 0.9 };
+        const transition = jumped[index]
+          ? { duration: 0 }
+          : { type: "spring" as const, stiffness: 320, damping: 34, mass: 0.9 };
 
         return (
           <motion.div

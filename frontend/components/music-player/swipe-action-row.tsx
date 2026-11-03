@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
+import { animate, motion, useMotionValue, useTransform } from "framer-motion";
 import { ListPlus, Trash2 } from "lucide-react";
 
 interface SwipeActionRowProps {
@@ -41,20 +41,13 @@ export function SwipeActionRow({
   const revealOpacity = useTransform(x, (value) =>
     Math.min(1, Math.abs(value) / 48),
   );
-  const reduceMotion = useReducedMotion();
 
   const isAdd = action === "add";
   const text = label ?? (isAdd ? "Agregar a la cola" : "Quitar de la cola");
   const Icon = isAdd ? ListPlus : Trash2;
 
   const springBack = () => {
-    animate(
-      x,
-      0,
-      reduceMotion
-        ? { duration: 0 }
-        : { type: "spring", stiffness: 420, damping: 36 },
-    );
+    animate(x, 0, { type: "spring", stiffness: 420, damping: 36 });
   };
 
   return (
@@ -157,7 +150,7 @@ export function SwipeActionRow({
               busyRef.current = false;
               springBack();
             } else {
-              animate(x, -width, { duration: reduceMotion ? 0 : 0.18 }).then(() => {
+              animate(x, -width, { duration: 0.18 }).then(() => {
                 onAction();
                 x.set(0);
                 busyRef.current = false;
